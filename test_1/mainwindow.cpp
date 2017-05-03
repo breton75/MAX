@@ -11,29 +11,75 @@ MainWindow::MainWindow(QWidget *parent) :
 {
   ui->setupUi(this);
   
+  /* заполняем список устройств */
   on_bnGetDeviceList_clicked();
   
-  _chart = new Chart(); 
-  _chart->setTitle("Значения датчика (мкс.)");
+  /* режимы отображения */
+  ui->cbViewType->addItem("Скорость м/с.");
+  ui->cbViewType->addItem("TOF diff нс.");
+
+  /* читаем параметры программы */
+  AppParams::WindowParams p;
+  p = AppParams::readWindowParams(this);
+  this->resize(p.size);
+  this->move(p.position);
+  this->setWindowState(p.state);
+  
+  ui->spinTimer->setValue(AppParams::readParam(this, "General", "RequestTimer", 500).toInt());
+  ui->checkLog->setChecked(AppParams::readParam(this, "General", "Log", true).toBool());
+  ui->cbViewType->setCurrentIndex(AppParams::readParam(this, "Chart", "ViewType", 0).toInt());
+  ui->checkAutoscale->setChecked(AppParams::readParam(this, "Chart", "Autoscale", true).toBool());
+  ui->cbDevices->setCurrentIndex(ui->cbDevices->findText(AppParams::readParam(this, "General", "LastDeviceName", "").toString()));
+  
+  _chp.x_range = AppParams::readParam(this, "Chart", "x_range", 300).toInt();
+  ui->spinXRange->setValue(_chp.x_range);
+  _chp.x_tick_count = AppParams::readParam(this, "Chart", "x_tick_count", 26).toInt();
+  _chp.y_range = AppParams::readParam(this, "Chart", "y_range", 1).toInt();
+  _chp.y_tick_count = AppParams::readParam(this, "Chart", "y_tick_count", 11).toInt();
+  _chp.line_color = AppParams::readParam(this, "Chart", "line_color", QColor(25, 0, 0, 255)).toInt();
+  _chp.line_width = AppParams::readParam(this, "Chart", "line_width", 2).toInt();
+  
+  _chart = new Chart(_chp); 
   _chart->legend()->hide();
   _chart->setAnimationOptions(QChart::NoAnimation);
   
   chartView = new QChartView(_chart);
   chartView->setRenderHint(QPainter::Antialiasing);
-  chartView->setParent(ui->dockWidget);
+  chartView->setParent(this);
   chartView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  chartView->setRubberBand(QChartView::RectangleRubberBand);
+//  chartView->setru
+  
 //  chartView->setGeometry(100, 100, 400, 400);
   
   ui->verticalLayout_2->addWidget(chartView);
-  
-//  chartView->show();
-  
-//  setCentralWidget(&chartView);
+
   
 }
 
 MainWindow::~MainWindow()
 {
+  /* завершаем работу с платой */
+  if(_thr)
+  {
+    _thr->killTimer(_timerId);
+    _thr->deleteLater(); 
+    delete _thr;
+    _thr = nullptr;
+    
+    libusb_release_interface(handle, 0); // отпускаем интерфейс 0
+    libusb_close(handle);  // закрываем устройство
+    libusb_exit(NULL);  // завершаем работу с библиотекой  
+  }
+  
+  /* сохраняем парметры программы */
+  AppParams::saveWindowParams(this, this->size(), this->pos(), this->windowState());
+  AppParams::saveParam(this, "General", "RequestTimer", ui->spinTimer->value());
+  AppParams::saveParam(this, "General", "Log", ui->checkLog->isChecked());
+  AppParams::saveParam(this, "General", "LastDeviceName", ui->cbDevices->currentText());
+  AppParams::saveParam(this, "Chart", "ViewType", ui->cbViewType->currentIndex());
+  AppParams::saveParam(this, "Chart", "Autoscale", ui->checkAutoscale->isChecked());
+  AppParams::saveParam(this, "Chart", "x_range", _chp.x_range);
   delete ui;
 }
 
@@ -78,7 +124,6 @@ void MainWindow::on_bnGetDeviceList_clicked()
   libusb_free_device_list(devs, 1);
 	libusb_exit(NULL);
   
-  ui->cbDevices->setCurrentIndex(3);
 }
 
 void MainWindow::on_bnOneShot_clicked()
@@ -136,8 +181,6 @@ void MainWindow::on_bnCycle_clicked()
     ui->bnCycle->setEnabled(true);
     
     _thr = new SvPullUsb(handle);
-//    connect(_thr, SIGNAL(finished()), _thr, SLOT(deleteLater()));
-//    connect(_thr, SIGNAL(finished()), this, SLOT(pulling_finished()));
     connect(_thr, SIGNAL(new_data(pullusb::fres*, pullusb::MAX35101EV_ANSWER*)), this, SLOT(new_data(pullusb::fres*, pullusb::MAX35101EV_ANSWER*)));
     _timerId = _thr->startTimer(200);
     
@@ -167,25 +210,42 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
     memcpy(&_max_data, max_data, sizeof(pullusb::MAX35101EV_ANSWER));
     MUTEX1.unlock();
     
-    _tick++;
-
-//    qDebug() << qFromBigEndian<qint32>(_max_data.hit_up_average) << qFromBigEndian<qint32>(_max_data.hit_down_average);
-    
     /** ******************************* **/
-    qreal up = qFromBigEndian<qint32>(_max_data.hit_up_average) / 262.14;
-    qreal down = qFromBigEndian<qint32>(_max_data.hit_down_average) / 262.14;
-    qreal diff = up - down;
-//    qDebug() << diff;
+    qreal t1 = qFromBigEndian<qint32>(_max_data.hit_up_average) / 262.14;   // время пролета 1, в нс.
+    qreal t2 = qFromBigEndian<qint32>(_max_data.hit_down_average) / 262.14; // время пролета 2, в нс.
+    qreal L = 0.0895; // расстояние между излучателями в метрах
     
-    _chart->m_series->append(_tick, diff);
+    qreal TOFdiff = t1 - t2;
+    qreal Vsnd = 2 * L / ((t1 + t2) / 1000000000); // определяем скорость звука в среде, м/с.
+    qreal Vpot = Vsnd * (TOFdiff / (t1 + t2)); // определяем скорость потока, м/с.
     
-    ui->textEdit->append(QString("Hit Up Avg. %1\tHit Down Avg. %2\tTOF %3").arg(up).arg(down).arg(diff));
+//    qDebug() << dt << Vsnd << Vpot;
+
+    qreal val = ui->cbViewType->currentIndex() == 1 ? TOFdiff : Vpot;
+
+    _chart->m_series->append(_tick++, val);
+
+    if(_tick > _chart->axX->max())
+      _chart->scroll(_chart->plotArea().width() / _chp.x_range, 0);
+    
+    
+    if(ui->checkLog->isChecked())
+      ui->textLog->append(QString("Hit Up Avg: %1\tHit Down Avg: %2\tTOF diff: %3\tVpot: %4\tVsnd: %5")
+                          .arg(t1).arg(t2).arg(TOFdiff, 0, 'f', 6).arg(Vpot, 0, 'f', 3).arg(Vsnd, 0, 'f', 4));
+    
+    if(/*ui->checkAutoscale->isChecked() && */(qAbs<qreal>(val) > qAbs<qreal>(_chp.y_range)))
+    {
+      qDebug() << "ddf";
+      _chp.y_range = qAbs<qreal>(val) * 1.1;
+      _chart->axisY()->setRange(-_chp.y_range, _chp.y_range);
+      _chart->update();
+    }
     
     
   }
   else
   {
-    qDebug() << "Error: " << result->message;
+    ui->textLog->append(QString("Error: %1").arg(QString(result->message)));
   }
   
   delete result;
@@ -193,26 +253,19 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
   
 }
 
-void MainWindow::pulling_finished()
+void MainWindow::on_cbViewType_currentIndexChanged(int index)
 {
-
+  Q_UNUSED(index);
+  
+  if(!_chart) return;
+  
+  _chart->scroll(-_tick, 0);
+  _chart->m_series->clear();
+  _tick = 0;
 }
+
 
 /** ******************************* **/
-SvPullUsb::SvPullUsb(libusb_device_handle* handle)
-{
-  _handle = handle;
-//  _isWorking = true;
-}
-
-SvPullUsb::~SvPullUsb()
-{ 
-//  _isWorking = false;
-  
-//  while(!_isFinished) QApplication::processEvents();
-//  deleteLater();
-}
-
 void SvPullUsb::timerEvent(QTimerEvent *te)
 {
   MUTEX1.lock();
@@ -223,7 +276,78 @@ void SvPullUsb::timerEvent(QTimerEvent *te)
   
 }
 
-void SvPullUsb::stop()
+
+
+
+void MainWindow::on_actionChartSettings_triggered()
+{
+    
+}
+
+void MainWindow::on_pushButton_clicked()
 {
   
+    _chart->scroll(-_chart->plotArea().width() / _chart->axX->tickCount() , 0);
+    _chart->m_series->clear();
+    _tick = 0;
+}
+
+void MainWindow::on_bnSetXRange_clicked()
+{
+  MUTEX1.lock();
+  _chart->axX->setRange(0, ui->spinXRange->value());  
+  _chp.x_range = ui->spinXRange->value();
+  _chart->update();
+  MUTEX1.unlock();
+}
+
+void MainWindow::on_bnYRangeUp_clicked()
+{
+  _chp.y_range = ((_chart->axY->max() - _chart->axY->min()) / 2) * 1.25;
+  _chart->axY->setRange(-_chp.y_range, _chp.y_range);
+  _chart->update();
+}
+
+void MainWindow::on_bnYRangeDown_clicked()
+{
+  _chp.y_range = ((_chart->axY->max() - _chart->axY->min()) / 2) / 1.25;
+  _chart->axY->setRange(-_chp.y_range, _chp.y_range);
+  _chart->update();
+}
+
+void MainWindow::on_bnXRangeUp_clicked()
+{
+  _chp.x_range *= 1.25;
+  _chart->axX->setRange(-_chp.x_range, _chp.x_range);
+  _chart->update();
+}
+
+void MainWindow::on_bnXRangeDown_clicked()
+{
+  _chp.x_range /= 1.25;
+  _chart->axX->setRange(-_chp.x_range, _chp.x_range);
+  _chart->update();
+}
+
+void MainWindow::on_bnYRangeActual_clicked()
+{
+  qreal max = -1000000000;
+  qreal min = 1000000000;
+  foreach (QPointF pnt, _chart->m_series->pointsVector()) {
+    if(pnt.y() > max)
+      max = pnt.y();
+    
+    if(pnt.y() < min)
+      min = pnt.y();
+  }
+  
+  _chp.y_range = qAbs<qreal>(max) > qAbs<qreal>(min) ? qAbs<qreal>(max) : qAbs<qreal>(min);
+  
+  _chart->axY->setRange(-_chp.y_range, _chp.y_range);
+  _chart->update();
+}
+
+void MainWindow::on_bnXRangeActual_clicked()
+{
+  _chart->axX->setRange(0, _tick);
 }

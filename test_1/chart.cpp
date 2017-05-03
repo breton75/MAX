@@ -35,26 +35,41 @@
 #include <QtCore/QDebug>
 #include <QtWidgets/QGesture>
 
-Chart::Chart(QGraphicsItem *parent, Qt::WindowFlags wFlags):
+Chart::Chart(ChartParams &params, QGraphicsItem *parent, Qt::WindowFlags wFlags):
     QChart(QChart::ChartTypeCartesian, parent, wFlags),
     m_series(0),
-    m_axis(new QValueAxis),
     m_step(0),
     m_x(0),
-    m_y(0)
+    m_y(0),
+    _params(params)
 {
-    m_series = new QSplineSeries(this);
-    QPen green(Qt::red);
-    green.setWidth(2);
+  
+  m_series = new QLineSeries(this);
+    QPen green(_params.line_color);
+    green.setWidth(_params.line_width);
     m_series->setPen(green);
     m_series->append(m_x, m_y);
-
+    
+    axX = new QValueAxis;
+    axX->setRange(0, _params.x_range);
+    axX->setLabelFormat("%g");
+    axX->setTitleText("Отсчеты");
+    axX->setTickCount(_params.x_tick_count);
+    axX->applyNiceNumbers();
+    
+    axY = new QValueAxis;
+    axY->setRange(-_params.y_range, _params.y_range);
+    axY->setTitleText("");
+    axY->setTickCount(_params.y_tick_count);
+    
     addSeries(m_series);
-    createDefaultAxes();
-    setAxisX(m_axis, m_series);
-    m_axis->setTickCount(20);
-    axisX()->setRange(0, 200);
-    axisY()->setRange(-100, 100);
+//    createDefaultAxes();
+    setAxisX(axX, m_series);
+    setAxisY(axY, m_series);
+    
+//    m_axis->setTickCount(20);
+//    axX()->setRange(0, 200);
+//    axY()->setRange(-5, 5);
 
 }
 
@@ -63,38 +78,25 @@ Chart::~Chart()
 
 }
 
-void Chart::handleTimeout()
+bool Chart::sceneEvent(QEvent *event)
 {
-    qreal x = plotArea().width() / m_axis->tickCount();
-    qreal y = (m_axis->max() - m_axis->min()) / m_axis->tickCount();
-    m_x += 1;
-    m_y = qrand() % 5 - 2.5;
-    m_series->append(m_x, m_y);
-//    scroll(x, 0);
-    if (m_x == 100)
-        m_timer.stop();
+    if (event->type() == QEvent::Gesture)
+        return gestureEvent(static_cast<QGestureEvent *>(event));
+    return QChart::event(event);
 }
 
-//bool Chart::sceneEvent(QEvent *event)
-//{
-//  qDebug() << event->type();
-//    if (event->type() == QEvent::Gesture)
-//        return gestureEvent(static_cast<QGestureEvent *>(event));
-//    return QChart::event(event);
-//}
+bool Chart::gestureEvent(QGestureEvent *event)
+{
+    if (QGesture *gesture = event->gesture(Qt::PanGesture)) {
+        QPanGesture *pan = static_cast<QPanGesture *>(gesture);
+        QChart::scroll(-(pan->delta().x()), pan->delta().y());
+    }
 
-//bool Chart::gestureEvent(QGestureEvent *event)
-//{
-//    if (QGesture *gesture = event->gesture(Qt::PanGesture)) {
-//        QPanGesture *pan = static_cast<QPanGesture *>(gesture);
-//        QChart::scroll(-(pan->delta().x()), pan->delta().y());
-//    }
+    if (QGesture *gesture = event->gesture(Qt::PinchGesture)) {
+        QPinchGesture *pinch = static_cast<QPinchGesture *>(gesture);
+        if (pinch->changeFlags() & QPinchGesture::ScaleFactorChanged)
+            QChart::zoom(pinch->scaleFactor());
+    }
 
-//    if (QGesture *gesture = event->gesture(Qt::PinchGesture)) {
-//        QPinchGesture *pinch = static_cast<QPinchGesture *>(gesture);
-//        if (pinch->changeFlags() & QPinchGesture::ScaleFactorChanged)
-//            QChart::zoom(pinch->scaleFactor());
-//    }
-
-//    return true;
-//}
+    return true;
+}

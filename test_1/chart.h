@@ -35,6 +35,7 @@
 
 QT_CHARTS_BEGIN_NAMESPACE
 class QSplineSeries;
+class QLineSeries;
 class QValueAxis;
 QT_CHARTS_END_NAMESPACE
 
@@ -45,19 +46,26 @@ QT_END_NAMESPACE
 
 QT_CHARTS_USE_NAMESPACE
 
+struct ChartParams{
+  int x_range = 300;
+  int x_tick_count = 26;
+  int y_range = 1;
+  int y_tick_count = 11;
+  int line_width = 2;
+  QColor line_color = Qt::red;
+};
+
 //![1]
 class Chart: public QChart
 {
     Q_OBJECT
 public:
-    Chart(QGraphicsItem *parent = 0, Qt::WindowFlags wFlags = 0);
+    Chart(ChartParams &params, QGraphicsItem *parent = 0, Qt::WindowFlags wFlags = 0);
     virtual ~Chart();
     
-    QSplineSeries *m_series;
-    QValueAxis *m_axis;
-
-public slots:
-    void handleTimeout();
+    QLineSeries *m_series;
+    QValueAxis *axX;
+    QValueAxis *axY;
 
 private:
     QTimer m_timer;
@@ -66,11 +74,13 @@ private:
     qreal m_x;
     qreal m_y;
     
-//protected:
-//    bool sceneEvent(QEvent *event);
+    ChartParams _params;
+    
+protected:
+    bool sceneEvent(QEvent *event);
 
-//private:
-//    bool gestureEvent(QGestureEvent *event);
+private:
+    bool gestureEvent(QGestureEvent *event);
 };
 //![1]
 

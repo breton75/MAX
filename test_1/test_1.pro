@@ -26,16 +26,21 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += main.cpp\
         mainwindow.cpp \
     pull_usb.cpp \
-    chart.cpp
+    chart.cpp \
+    ../../Common/sv_settings.cpp \
+    sv_chartsettingsdialog.cpp
 
 
 HEADERS  += mainwindow.h \
     ../../libusb-1.0.21/include/libusb-1.0/libusb.h \
     pull_usb.h \
     pull_usb_копия.h \
-    chart.h
+    chart.h \
+    ../../Common/sv_settings.h \
+    sv_chartsettingsdialog.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    sv_chartsettingsdialog.ui
 
 win32: LIBS += -L$$PWD/../../libusb-1.0.21/MinGW32/dll/ -llibusb-1.0
 

@@ -60,7 +60,7 @@ fres *pullusb::pullData(libusb_device_handle *handle, QByteArray &ba)
   result->data = (char*)malloc(sizeof(MAX35101EV_ANSWER));
   
   result->code = libusb_bulk_transfer(handle, 0x81, (unsigned char*)result->data, sizeof(MAX35101EV_ANSWER), &transfered, 1000);
-  
+
   if((result->code != 0)/* | (transfered != b.size())*/)
   {
     result->message = "Ошибка при получении ответа\0";

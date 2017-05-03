@@ -10,6 +10,7 @@
 #include <QMutex>
 #include <QThread>
 #include <QtEndian>
+#include <QComboBox>
 
 #include <QChart>
 #include <QtCharts/QChartView>
@@ -22,6 +23,8 @@ QT_CHARTS_USE_NAMESPACE
 #include "libusb.h"
 #include "pull_usb.h"
 #include "chart.h"
+
+#include "../../Common/sv_settings.h"
 
 namespace Ui {
 class MainWindow;
@@ -43,30 +46,47 @@ public:
   
 private slots:
   void on_bnGetDeviceList_clicked();
-  
   void on_bnOneShot_clicked();
-  
   void on_bnCycle_clicked();
+  void on_cbViewType_currentIndexChanged(int index);
   
   void new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max_data);
-  void pulling_finished();
+  
+  void on_actionChartSettings_triggered();
+  
+  void on_pushButton_clicked();
+  
+  void on_bnSetXRange_clicked();
+  
+  void on_bnYRangeUp_clicked();
+  
+  void on_bnYRangeDown_clicked();
+  
+  void on_bnXRangeUp_clicked();
+  
+  void on_bnXRangeDown_clicked();
+  
+  void on_bnYRangeActual_clicked();
+  
+  void on_bnXRangeActual_clicked();
   
 private:
   Ui::MainWindow *ui;
   
   QMap<int, QPair<uint16_t, uint16_t>> _devices;
-  SvPullUsb *_thr = nullptr;
   
+  SvPullUsb *_thr = nullptr;
   int _timerId;
   
   pullusb::MAX35101EV_ANSWER _max_data;
   
-  Chart *_chart;
+  Chart *_chart = nullptr;
   QChartView *chartView;
   int _tick = 0;
+//  qreal _y_range = 1;
   
-//  int pullData(libusb_device_handle *handle, QByteArray &ba);
-  
+  ChartParams _chp;
+   
 };
 
 
@@ -75,33 +95,23 @@ class SvPullUsb: public QThread
     Q_OBJECT
   
 public:
-  explicit SvPullUsb(libusb_device_handle *handle);
+  explicit SvPullUsb(libusb_device_handle *handle)
+  {
+    _handle = handle;
+  }
   
-  ~SvPullUsb();
-  
-//  bool isWorking() { return _isWorking; }
-//  bool isFinished() { return _isFinished; }
-  
-  void stop();
+  ~SvPullUsb() { }
+
   pullusb::MAX35101EV_ANSWER max_data;
   
-  
-  
 protected:
-//  void run() Q_DECL_OVERRIDE;
   void timerEvent(QTimerEvent *te);
   
 private:
-//  bool _isWorking = false;
-//  bool _isFinished = true;
   libusb_device_handle* _handle;
   
 signals:
   void new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max_data);
-//  void consumer_updated(int , ConsumerDataStruct);
-//  void sensor_updated(int , SensorDataStruct);
-  
-//  void recalc();
   
 };
 
