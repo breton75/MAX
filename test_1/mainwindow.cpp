@@ -34,9 +34,9 @@ MainWindow::MainWindow(QWidget *parent) :
   _chp.x_range = AppParams::readParam(this, "Chart", "x_range", 300).toInt();
   ui->spinXRange->setValue(_chp.x_range);
   _chp.x_tick_count = AppParams::readParam(this, "Chart", "x_tick_count", 26).toInt();
-  _chp.y_range = AppParams::readParam(this, "Chart", "y_range", 1).toInt();
+  _chp.y_range = AppParams::readParam(this, "Chart", "y_range", 5).toInt();
   _chp.y_tick_count = AppParams::readParam(this, "Chart", "y_tick_count", 11).toInt();
-  _chp.line_color = AppParams::readParam(this, "Chart", "line_color", QColor(25, 0, 0, 255)).toInt();
+  _chp.line_color = QColor(AppParams::readParam(this, "Chart", "line_color", 0xFFFF0000).toUInt());
   _chp.line_width = AppParams::readParam(this, "Chart", "line_width", 2).toInt();
   
   _chart = new Chart(_chp); 
@@ -208,7 +208,6 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
   {
     MUTEX1.lock();
     memcpy(&_max_data, max_data, sizeof(pullusb::MAX35101EV_ANSWER));
-    MUTEX1.unlock();
     
     /** ******************************* **/
     qreal t1 = qFromBigEndian<qint32>(_max_data.hit_up_average) / 262.14;   // время пролета 1, в нс.
@@ -225,7 +224,7 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
 
     _chart->m_series->append(_tick++, val);
 
-    if(_tick > _chart->axX->max())
+    if(_tick >= _chart->axX->max())
       _chart->scroll(_chart->plotArea().width() / _chp.x_range, 0);
     
     
@@ -233,9 +232,8 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
       ui->textLog->append(QString("Hit Up Avg: %1\tHit Down Avg: %2\tTOF diff: %3\tVpot: %4\tVsnd: %5")
                           .arg(t1).arg(t2).arg(TOFdiff, 0, 'f', 6).arg(Vpot, 0, 'f', 3).arg(Vsnd, 0, 'f', 4));
     
-    if(/*ui->checkAutoscale->isChecked() && */(qAbs<qreal>(val) > qAbs<qreal>(_chp.y_range)))
+    if(ui->checkAutoscale->isChecked() & (qAbs<qreal>(val) > qAbs<qreal>(_chp.y_range)))
     {
-      qDebug() << "ddf";
       _chp.y_range = qAbs<qreal>(val) * 1.1;
       _chart->axisY()->setRange(-_chp.y_range, _chp.y_range);
       _chart->update();
@@ -250,6 +248,7 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
   
   delete result;
   
+  MUTEX1.unlock();
   
 }
 
@@ -278,61 +277,54 @@ void SvPullUsb::timerEvent(QTimerEvent *te)
 
 
 
+/** ****************************** **/
+
 
 void MainWindow::on_actionChartSettings_triggered()
 {
     
 }
 
-void MainWindow::on_pushButton_clicked()
-{
-  
-    _chart->scroll(-_chart->plotArea().width() / _chart->axX->tickCount() , 0);
-    _chart->m_series->clear();
-    _tick = 0;
-}
-
 void MainWindow::on_bnSetXRange_clicked()
 {
-  MUTEX1.lock();
   _chart->axX->setRange(0, ui->spinXRange->value());  
   _chp.x_range = ui->spinXRange->value();
-  _chart->update();
-  MUTEX1.unlock();
 }
 
 void MainWindow::on_bnYRangeUp_clicked()
 {
   _chp.y_range = ((_chart->axY->max() - _chart->axY->min()) / 2) * 1.25;
+  _chp.y_range = _chp.y_range < 1 ? 1 : _chp.y_range;
   _chart->axY->setRange(-_chp.y_range, _chp.y_range);
-  _chart->update();
 }
 
 void MainWindow::on_bnYRangeDown_clicked()
 {
   _chp.y_range = ((_chart->axY->max() - _chart->axY->min()) / 2) / 1.25;
+  _chp.y_range = _chp.y_range < 1 ? 1 : _chp.y_range;
   _chart->axY->setRange(-_chp.y_range, _chp.y_range);
-  _chart->update();
 }
 
 void MainWindow::on_bnXRangeUp_clicked()
 {
   _chp.x_range *= 1.25;
-  _chart->axX->setRange(-_chp.x_range, _chp.x_range);
+  _chart->axX->setRange(0, _chp.x_range);
   _chart->update();
 }
 
 void MainWindow::on_bnXRangeDown_clicked()
 {
   _chp.x_range /= 1.25;
-  _chart->axX->setRange(-_chp.x_range, _chp.x_range);
-  _chart->update();
+  _chart->axX->setRange(0, _chp.x_range);
 }
 
 void MainWindow::on_bnYRangeActual_clicked()
 {
+  MUTEX1.lock();
+  
   qreal max = -1000000000;
   qreal min = 1000000000;
+  
   foreach (QPointF pnt, _chart->m_series->pointsVector()) {
     if(pnt.y() > max)
       max = pnt.y();
@@ -342,12 +334,25 @@ void MainWindow::on_bnYRangeActual_clicked()
   }
   
   _chp.y_range = qAbs<qreal>(max) > qAbs<qreal>(min) ? qAbs<qreal>(max) : qAbs<qreal>(min);
-  
   _chart->axY->setRange(-_chp.y_range, _chp.y_range);
-  _chart->update();
+  
+  MUTEX1.unlock();
 }
 
 void MainWindow::on_bnXRangeActual_clicked()
 {
   _chart->axX->setRange(0, _tick);
+}
+
+void MainWindow::on_bnResetChart_clicked()
+{
+  _chart->axX->setRange(0, _chp.x_range);
+  _chart->m_series->clear();
+  _tick = 0;   
+}
+
+void MainWindow::on_checkAutoscale_clicked(bool checked)
+{
+  if(checked)
+    on_bnYRangeActual_clicked();
 }

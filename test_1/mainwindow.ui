@@ -117,9 +117,13 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="bnResetChart">
         <property name="text">
-         <string>PushButton</string>
+         <string>Reset</string>
+        </property>
+        <property name="icon">
+         <iconset>
+          <normaloff>../../Common/Icons/Basic/Refresh.ico</normaloff>../../Common/Icons/Basic/Refresh.ico</iconset>
         </property>
        </widget>
       </item>
@@ -186,7 +190,7 @@
       <item>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QPushButton" name="bnYRangeUp">
+         <widget class="QPushButton" name="bnYRangeDown">
           <property name="maximumSize">
            <size>
             <width>25</width>
@@ -194,7 +198,11 @@
            </size>
           </property>
           <property name="text">
-           <string>+</string>
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>../../Common/Icons/Basic/Zoom in.ico</normaloff>../../Common/Icons/Basic/Zoom in.ico</iconset>
           </property>
          </widget>
         </item>
@@ -207,12 +215,16 @@
            </size>
           </property>
           <property name="text">
-           <string>*</string>
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>../../Common/Icons/Basic/Search.ico</normaloff>../../Common/Icons/Basic/Search.ico</iconset>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="bnYRangeDown">
+         <widget class="QPushButton" name="bnYRangeUp">
           <property name="maximumSize">
            <size>
             <width>25</width>
@@ -220,7 +232,11 @@
            </size>
           </property>
           <property name="text">
-           <string>-</string>
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset>
+            <normaloff>../../Common/Icons/Basic/Zoom out.ico</normaloff>../../Common/Icons/Basic/Zoom out.ico</iconset>
           </property>
          </widget>
         </item>
@@ -234,7 +250,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
           <item>
-           <widget class="QPushButton" name="bnXRangeUp">
+           <widget class="QPushButton" name="bnXRangeDown">
             <property name="maximumSize">
              <size>
               <width>25</width>
@@ -242,7 +258,11 @@
              </size>
             </property>
             <property name="text">
-             <string>+</string>
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../Common/Icons/Basic/Zoom out.ico</normaloff>../../Common/Icons/Basic/Zoom out.ico</iconset>
             </property>
            </widget>
           </item>
@@ -255,12 +275,16 @@
              </size>
             </property>
             <property name="text">
-             <string>o</string>
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../Common/Icons/Basic/Search.ico</normaloff>../../Common/Icons/Basic/Search.ico</iconset>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="bnXRangeDown">
+           <widget class="QPushButton" name="bnXRangeUp">
             <property name="maximumSize">
              <size>
               <width>25</width>
@@ -268,7 +292,11 @@
              </size>
             </property>
             <property name="text">
-             <string>-</string>
+             <string/>
+            </property>
+            <property name="icon">
+             <iconset>
+              <normaloff>../../Common/Icons/Basic/Zoom in.ico</normaloff>../../Common/Icons/Basic/Zoom in.ico</iconset>
             </property>
            </widget>
           </item>

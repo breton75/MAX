@@ -49,7 +49,7 @@ QT_CHARTS_USE_NAMESPACE
 struct ChartParams{
   int x_range = 300;
   int x_tick_count = 26;
-  int y_range = 1;
+  qreal y_range = 1.0;
   int y_tick_count = 11;
   int line_width = 2;
   QColor line_color = Qt::red;

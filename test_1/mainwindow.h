@@ -11,6 +11,7 @@
 #include <QThread>
 #include <QtEndian>
 #include <QComboBox>
+#include <QRgb>
 
 #include <QChart>
 #include <QtCharts/QChartView>
@@ -53,22 +54,17 @@ private slots:
   void new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max_data);
   
   void on_actionChartSettings_triggered();
-  
-  void on_pushButton_clicked();
-  
+ 
   void on_bnSetXRange_clicked();
-  
   void on_bnYRangeUp_clicked();
-  
   void on_bnYRangeDown_clicked();
-  
   void on_bnXRangeUp_clicked();
-  
   void on_bnXRangeDown_clicked();
-  
   void on_bnYRangeActual_clicked();
-  
   void on_bnXRangeActual_clicked();
+  void on_bnResetChart_clicked();
+  
+  void on_checkAutoscale_clicked(bool checked);
   
 private:
   Ui::MainWindow *ui;
