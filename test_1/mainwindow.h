@@ -12,6 +12,7 @@
 #include <QtEndian>
 #include <QComboBox>
 #include <QRgb>
+#include <QTime>
 
 #include <QChart>
 #include <QtCharts/QChartView>
@@ -44,6 +45,7 @@ public:
   ~MainWindow();
   
   libusb_device_handle* handle;
+//  QTimer tm;
   
 private slots:
   void on_bnGetDeviceList_clicked();
@@ -65,6 +67,8 @@ private slots:
   void on_bnResetChart_clicked();
   
   void on_checkAutoscale_clicked(bool checked);
+  
+//  void tmTimeosut();
   
 private:
   Ui::MainWindow *ui;
@@ -91,19 +95,28 @@ class SvPullUsb: public QThread
     Q_OBJECT
   
 public:
-  explicit SvPullUsb(libusb_device_handle *handle)
+  explicit SvPullUsb(libusb_device_handle *handle, quint32 timeout)
   {
     _handle = handle;
+    _timeout = timeout;
   }
   
-  ~SvPullUsb() { }
+  ~SvPullUsb();
 
+  void stop();
+  
   pullusb::MAX35101EV_ANSWER max_data;
   
+  
 protected:
-  void timerEvent(QTimerEvent *te);
+//  void timerEvent(QTimerEvent *te);
   
 private:
+  void run() Q_DECL_OVERRIDE;
+  
+  bool _started;
+  bool _finished;
+  quint32 _timeout;
   libusb_device_handle* _handle;
   
 signals:

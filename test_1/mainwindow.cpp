@@ -19,12 +19,6 @@ MainWindow::MainWindow(QWidget *parent) :
   ui->cbViewType->addItem("TOF diff нс.");
 
   /* читаем параметры программы */
-  AppParams::WindowParams p;
-  p = AppParams::readWindowParams(this);
-  this->resize(p.size);
-  this->move(p.position);
-  this->setWindowState(p.state);
-  
   ui->spinTimer->setValue(AppParams::readParam(this, "General", "RequestTimer", 500).toInt());
   ui->checkLog->setChecked(AppParams::readParam(this, "General", "Log", true).toBool());
   ui->cbViewType->setCurrentIndex(AppParams::readParam(this, "Chart", "ViewType", 0).toInt());
@@ -46,15 +40,17 @@ MainWindow::MainWindow(QWidget *parent) :
   chartView = new QChartView(_chart);
   chartView->setRenderHint(QPainter::Antialiasing);
   chartView->setParent(this);
+//  chartView->setGeometry(0,0,1200, 800);
   chartView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   chartView->setRubberBand(QChartView::RectangleRubberBand);
-//  chartView->setru
-  
-//  chartView->setGeometry(100, 100, 400, 400);
-  
   ui->verticalLayout_2->addWidget(chartView);
-
   
+  /* параметры окна */
+  AppParams::WindowParams p = AppParams::readWindowParams(this);
+  this->resize(p.size);
+  this->move(p.position);
+  this->setWindowState(p.state);
+    
 }
 
 MainWindow::~MainWindow()
@@ -62,7 +58,8 @@ MainWindow::~MainWindow()
   /* завершаем работу с платой */
   if(_thr)
   {
-    _thr->killTimer(_timerId);
+//    _thr->killTimer(_timerId);
+    _thr->stop();
     _thr->deleteLater(); 
     delete _thr;
     _thr = nullptr;
@@ -180,33 +177,61 @@ void MainWindow::on_bnCycle_clicked()
     ui->bnCycle->setText("Stop");
     ui->bnCycle->setEnabled(true);
     
-    _thr = new SvPullUsb(handle);
+//    tm.setSingleShot(true);
+//    tm.connect(&tm, SIGNAL(timeout()), this, SLOT(tmTimeout()));
+    
+    _thr = new SvPullUsb(handle, ui->spinTimer->value());
     connect(_thr, SIGNAL(new_data(pullusb::fres*, pullusb::MAX35101EV_ANSWER*)), this, SLOT(new_data(pullusb::fres*, pullusb::MAX35101EV_ANSWER*)));
-    _timerId = _thr->startTimer(200);
-    
+//    _timerId = _thr->startTimer(200);
+    _thr->start();
+
+    //    tm.start(1000);
   }
-  else /*if(_thr->is)*/
+  else
   {
-    _thr->killTimer(_timerId);
-    _thr->deleteLater(); // stop();
-    delete _thr;
-    _thr = nullptr;
-    
-    libusb_release_interface(handle, 0); // отпускаем интерфейс 0
-    libusb_close(handle);  // закрываем устройство
-    libusb_exit(NULL);  // завершаем работу с библиотекой  
-    
-    ui->bnCycle->setText("Cycle");
-    ui->bnCycle->setEnabled(true);
-    
+//    tm.stop();
+    //    _thr->killTimer(_timerId);
+      _thr->stop();
+      _thr->deleteLater(); // 
+      delete _thr;
+      _thr = nullptr;
+      
+      libusb_release_interface(handle, 0); // отпускаем интерфейс 0
+      libusb_close(handle);  // закрываем устройство
+      libusb_exit(NULL);  // завершаем работу с библиотекой  
+      
+      ui->bnCycle->setText("Cycle");
+      ui->bnCycle->setEnabled(true);
   }
+ 
 }
+
+//void MainWindow::tmTimeout()
+//{
+//  qDebug() << "tm";
+//  MUTEX1.lock();
+//  QGraphicsLineItem *l =_chart->scene()->addLine(_tick * _chart->plotArea().width() / _chp.x_range, -1, _tick * _chart->plotArea().width() / _chp.x_range, 1, QPen(Qt::blue));
+//  l->setZValue(100);
+//  l->show();
+//  MUTEX1.unlock();
+  
+//    _thr->stop();
+//    _thr->deleteLater(); // 
+//    delete _thr;
+//    _thr = nullptr;
+    
+//    libusb_release_interface(handle, 0); // отпускаем интерфейс 0
+//    libusb_close(handle);  // закрываем устройство
+//    libusb_exit(NULL);  // завершаем работу с библиотекой  
+    
+//    ui->bnCycle->setText("Cycle");
+//    ui->bnCycle->setEnabled(true);
+//}
 
 void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max_data)
 {
   if(result->code == 0)
   {
-    MUTEX1.lock();
     memcpy(&_max_data, max_data, sizeof(pullusb::MAX35101EV_ANSWER));
     
     /** ******************************* **/
@@ -222,6 +247,7 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
 
     qreal val = ui->cbViewType->currentIndex() == 1 ? TOFdiff : Vpot;
 
+    MUTEX1.lock();
     _chart->m_series->append(_tick++, val);
 
     if(_tick >= _chart->axX->max())
@@ -229,7 +255,8 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
     
     
     if(ui->checkLog->isChecked())
-      ui->textLog->append(QString("Hit Up Avg: %1\tHit Down Avg: %2\tTOF diff: %3\tVpot: %4\tVsnd: %5")
+      ui->textLog->append(QString("%1\tHit Up Avg: %2\tHit Down Avg: %3\tTOF diff: %4\tVpot: %5\tVsnd: %6")
+                          .arg(QTime::currentTime().toString("mm:ss.zzz"))
                           .arg(t1).arg(t2).arg(TOFdiff, 0, 'f', 6).arg(Vpot, 0, 'f', 3).arg(Vsnd, 0, 'f', 4));
     
     if(ui->checkAutoscale->isChecked() & (qAbs<qreal>(val) > qAbs<qreal>(_chp.y_range)))
@@ -239,6 +266,7 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
       _chart->update();
     }
     
+    MUTEX1.unlock();
     
   }
   else
@@ -247,8 +275,6 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
   }
   
   delete result;
-  
-  MUTEX1.unlock();
   
 }
 
@@ -265,16 +291,49 @@ void MainWindow::on_cbViewType_currentIndexChanged(int index)
 
 
 /** ******************************* **/
-void SvPullUsb::timerEvent(QTimerEvent *te)
-{
-  MUTEX1.lock();
-  pullusb::fres *result = pullusb::request(_handle, max_data);
-  MUTEX1.unlock();
+//void SvPullUsb::timerEvent(QTimerEvent *te)
+//{
+//  MUTEX1.lock();
+//  pullusb::fres *result = pullusb::request(_handle, max_data);
+//  MUTEX1.unlock();
 
-  emit new_data(result, &max_data);
+//  emit new_data(result, &max_data);
+  
+//}
+
+SvPullUsb::~SvPullUsb()
+{ 
+  stop();
+  deleteLater();
+}
+
+void SvPullUsb::run()
+{
+  _started = true;
+  _finished = false;
+  
+  while(_started)
+  {
+  
+//    MUTEX1.lock();
+    pullusb::fres *result = pullusb::request(_handle, max_data);
+//    MUTEX1.unlock();
+    
+    emit new_data(result, &max_data);
+    
+    msleep(_timeout);
+    
+  }
+  
+  _finished = true;
   
 }
 
+void SvPullUsb::stop()
+{
+  _started = false;
+  while(!_finished) QApplication::processEvents();
+}
 
 
 /** ****************************** **/
