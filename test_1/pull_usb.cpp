@@ -2,7 +2,7 @@
 
 using namespace pullusb;
 
-fres *pullusb::request(libusb_device_handle *handle, pullusb::MAX35101EV_ANSWER &databuf)
+fres *pullusb::request(libusb_device_handle *handle/*, pullusb::MAX35101EV_ANSWER &databuf*/)
 {
 
   /** первый запрос **/  
@@ -17,24 +17,30 @@ fres *pullusb::request(libusb_device_handle *handle, pullusb::MAX35101EV_ANSWER 
   QByteArray b3 = QByteArray::fromHex("3422C40000000000000000000000000000000000000000000000000000000000"
                                       "0000000000000000000000000000000000000000000000000000000000000000");
   
-  fres *result = pullusb::pullData(handle, b1);
-  if(result->code == 0)
+  fres *result2 = nullptr;
+  
+  fres *result1 = pullusb::pullData(handle, b1);
+  if(result1->code == 0)
   {
-    result = pullusb::pullData(handle, b2);
-    if((result->code == 0) & (nullptr != result->data))
+    
+    result2 = pullusb::pullData(handle, b2);
+    if((result2->code == 0) & (nullptr != result2->data))
     { 
-      memcpy(&databuf, result->data, sizeof(pullusb::MAX35101EV_ANSWER));
+//      memcpy(&databuf, result2->data, sizeof(pullusb::MAX35101EV_ANSWER));
 //      qDebug() << "22: "<< int(result->data[0]) << int(result->data[1]) << int(result->data[2]) << int(result->data[3]) << int(result->data[4]);
-
-      result = pullusb::pullData(handle, b3);
-      if(result->code == 0)
+      
+      
+      fres *result3 = pullusb::pullData(handle, b3);
+      if(result3->code == 0)
       {
         
       }
+      delete result3;
     }
   }
+  delete result1;
 
-  return result;
+  return result2;
   
 }
 
@@ -52,7 +58,6 @@ fres *pullusb::pullData(libusb_device_handle *handle, QByteArray &ba)
   if(result->code != 0)
   {
     result->message = "Ошибка при отправке\0";
-//    QMessageBox::critical(0, "Error", QString("Ошибка при отправке: %1").arg(result), QMessageBox::Ok);
     return result;
   }
   
@@ -64,7 +69,6 @@ fres *pullusb::pullData(libusb_device_handle *handle, QByteArray &ba)
   if((result->code != 0)/* | (transfered != b.size())*/)
   {
     result->message = "Ошибка при получении ответа\0";
-//    QMessageBox::critical(0, "Error", QString("Ошибка при получении ответа: %1").arg(result), QMessageBox::Ok);
     return result;
   }
 

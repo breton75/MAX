@@ -46,7 +46,7 @@ typedef struct{
 } fres;
 #pragma pack(pop)
 
-fres *request(libusb_device_handle *handle, MAX35101EV_ANSWER &databuf);
+fres *request(libusb_device_handle *handle);
 fres *pullData(libusb_device_handle *handle, QByteArray &ba);
 
 

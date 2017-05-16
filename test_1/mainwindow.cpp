@@ -139,13 +139,13 @@ void MainWindow::on_bnOneShot_clicked()
    
   libusb_claim_interface(handle, 0);  // запрашиваем интерфейс 0 для себя
   
-  pullusb::MAX35101EV_ANSWER max_data;
+//  pullusb::MAX35101EV_ANSWER max_data;
   
   MUTEX1.lock();
-  pullusb::fres *result = pullusb::request(handle, max_data);
+  pullusb::fres *result = pullusb::request(handle/*, max_data*/);
   MUTEX1.unlock();
   
-  emit new_data(result, &max_data);
+  emit new_data(result/*, &max_data*/);
 
   
   libusb_release_interface(handle, 0); // отпускаем интерфейс 0
@@ -181,7 +181,7 @@ void MainWindow::on_bnCycle_clicked()
 //    tm.connect(&tm, SIGNAL(timeout()), this, SLOT(tmTimeout()));
     
     _thr = new SvPullUsb(handle, ui->spinTimer->value());
-    connect(_thr, SIGNAL(new_data(pullusb::fres*, pullusb::MAX35101EV_ANSWER*)), this, SLOT(new_data(pullusb::fres*, pullusb::MAX35101EV_ANSWER*)));
+    connect(_thr, SIGNAL(new_data(pullusb::fres*/*, pullusb::MAX35101EV_ANSWER**/)), this, SLOT(new_data(pullusb::fres*/*, pullusb::MAX35101EV_ANSWER**/)));
 //    _timerId = _thr->startTimer(200);
     _thr->start();
 
@@ -228,11 +228,13 @@ void MainWindow::on_bnCycle_clicked()
 //    ui->bnCycle->setEnabled(true);
 //}
 
-void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max_data)
+void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *max_data*/)
 {
   if(result->code == 0)
   {
-    memcpy(&_max_data, max_data, sizeof(pullusb::MAX35101EV_ANSWER));
+    MUTEX1.lock();
+
+    memcpy(&_max_data, result->data, sizeof(pullusb::MAX35101EV_ANSWER));
     
     /** ******************************* **/
     qreal t1 = qFromBigEndian<qint32>(_max_data.hit_up_average) / 262.14;   // время пролета 1, в нс.
@@ -243,11 +245,10 @@ void MainWindow::new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max
     qreal Vsnd = 2 * L / ((t1 + t2) / 1000000000); // определяем скорость звука в среде, м/с.
     qreal Vpot = Vsnd * (TOFdiff / (t1 + t2)); // определяем скорость потока, м/с.
     
-//    qDebug() << dt << Vsnd << Vpot;
+//    qDebug() << TOFdiff << Vsnd << Vpot;
 
     qreal val = ui->cbViewType->currentIndex() == 1 ? TOFdiff : Vpot;
 
-    MUTEX1.lock();
     _chart->m_series->append(_tick++, val);
 
     if(_tick >= _chart->axX->max())
@@ -314,12 +315,12 @@ void SvPullUsb::run()
   
   while(_started)
   {
-  
-//    MUTEX1.lock();
-    pullusb::fres *result = pullusb::request(_handle, max_data);
-//    MUTEX1.unlock();
+    MUTEX1.lock();
+    pullusb::fres *result = pullusb::request(_handle/*, max_data*/);
+    MUTEX1.unlock();
     
-    emit new_data(result, &max_data);
+    if(result)
+      emit new_data(result/*, &max_data*/); 
     
     msleep(_timeout);
     

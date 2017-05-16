@@ -53,7 +53,7 @@ private slots:
   void on_bnCycle_clicked();
   void on_cbViewType_currentIndexChanged(int index);
   
-  void new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max_data);
+  void new_data(pullusb::fres *result);
   
   void on_actionChartSettings_triggered();
  
@@ -120,7 +120,7 @@ private:
   libusb_device_handle* _handle;
   
 signals:
-  void new_data(pullusb::fres *result, pullusb::MAX35101EV_ANSWER *max_data);
+  void new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *max_data*/);
   
 };
 
