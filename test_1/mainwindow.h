@@ -70,6 +70,8 @@ private slots:
   
 //  void tmTimeosut();
   
+  void on_checkShowTOF_clicked(bool checked);
+
 private:
   Ui::MainWindow *ui;
   

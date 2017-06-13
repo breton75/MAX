@@ -24,7 +24,8 @@ MainWindow::MainWindow(QWidget *parent) :
   ui->cbViewType->setCurrentIndex(AppParams::readParam(this, "Chart", "ViewType", 0).toInt());
   ui->checkAutoscale->setChecked(AppParams::readParam(this, "Chart", "Autoscale", true).toBool());
   ui->cbDevices->setCurrentIndex(ui->cbDevices->findText(AppParams::readParam(this, "General", "LastDeviceName", "").toString()));
-  
+  ui->checkShowTOF->setChecked(AppParams::readParam(this, "Chart", "ShowTOF", false).toBool());
+
   _chp.x_range = AppParams::readParam(this, "Chart", "x_range", 300).toInt();
   ui->spinXRange->setValue(_chp.x_range);
   _chp.x_tick_count = AppParams::readParam(this, "Chart", "x_tick_count", 26).toInt();
@@ -32,7 +33,8 @@ MainWindow::MainWindow(QWidget *parent) :
   _chp.y_tick_count = AppParams::readParam(this, "Chart", "y_tick_count", 11).toInt();
   _chp.line_color = QColor(AppParams::readParam(this, "Chart", "line_color", 0xFFFF0000).toUInt());
   _chp.line_width = AppParams::readParam(this, "Chart", "line_width", 2).toInt();
-  
+  _chp.show_TOF = ui->checkShowTOF->isChecked();
+
   _chart = new Chart(_chp); 
   _chart->legend()->hide();
   _chart->setAnimationOptions(QChart::NoAnimation);
@@ -77,6 +79,7 @@ MainWindow::~MainWindow()
   AppParams::saveParam(this, "Chart", "ViewType", ui->cbViewType->currentIndex());
   AppParams::saveParam(this, "Chart", "Autoscale", ui->checkAutoscale->isChecked());
   AppParams::saveParam(this, "Chart", "x_range", _chp.x_range);
+  AppParams::saveParam(this, "Chart", "ShowTOF", ui->checkShowTOF->isChecked());
   delete ui;
 }
 
@@ -243,27 +246,34 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
     
     qreal TOFdiff = t1 - t2;
     qreal Vsnd = 2 * L / ((t1 + t2) / 1000000000); // определяем скорость звука в среде, м/с.
-    qreal Vpot = Vsnd * (TOFdiff / (t1 + t2)); // определяем скорость потока, м/с.
+    qreal Vpot = 3*Vsnd * (TOFdiff / (t1 + t2)); // определяем скорость потока, м/с.
     
 //    qDebug() << TOFdiff << Vsnd << Vpot;
 
     qreal val = ui->cbViewType->currentIndex() == 1 ? TOFdiff : Vpot;
-
-    _chart->m_series->append(_tick++, val);
+    val = (t1+t2)/2;
+    _chart->m_series->append(_tick, val);
+    _chart->up_series->append(_tick, t1);
+    _chart->down_series->append(_tick, ((t2))); // + t2)/2 - 76027));
+    _tick++;
 
     if(_tick >= _chart->axX->max())
       _chart->scroll(_chart->plotArea().width() / _chp.x_range, 0);
     
     
     if(ui->checkLog->isChecked())
-      ui->textLog->append(QString("%1\tHit Up Avg: %2\tHit Down Avg: %3\tTOF diff: %4\tVpot: %5\tVsnd: %6")
+      ui->textLog->append(QString("%1%2\tHit Up Avg: %3\tHit Down Avg: %4\tTOF diff: %5\tVpot: %6\tVsnd: %7")
+                          .arg(_tick)
                           .arg(QTime::currentTime().toString("mm:ss.zzz"))
                           .arg(t1).arg(t2).arg(TOFdiff, 0, 'f', 6).arg(Vpot, 0, 'f', 3).arg(Vsnd, 0, 'f', 4));
     
     if(ui->checkAutoscale->isChecked() & (qAbs<qreal>(val) > qAbs<qreal>(_chp.y_range)))
     {
-      _chp.y_range = qAbs<qreal>(val) * 1.1;
-      _chart->axisY()->setRange(-_chp.y_range, _chp.y_range);
+      qreal y1 = qAbs<qreal>(val) - 1.1;
+      qreal y2 = qAbs<qreal>(val) + 1.1;
+      _chart->axisY()->setRange(y1, y2);
+//      _chp.y_range = qAbs<qreal>(val) * 1.1;
+//      _chart->axisY()->setRange(-_chp.y_range, _chp.y_range);
       _chart->update();
     }
     
@@ -287,6 +297,8 @@ void MainWindow::on_cbViewType_currentIndexChanged(int index)
   
   _chart->scroll(-_tick, 0);
   _chart->m_series->clear();
+  _chart->up_series->clear();
+  _chart->down_series->clear();
   _tick = 0;
 }
 
@@ -393,8 +405,9 @@ void MainWindow::on_bnYRangeActual_clicked()
       min = pnt.y();
   }
   
-  _chp.y_range = qAbs<qreal>(max) > qAbs<qreal>(min) ? qAbs<qreal>(max) : qAbs<qreal>(min);
-  _chart->axY->setRange(-_chp.y_range, _chp.y_range);
+//  _chp.y_range = qAbs<qreal>(max) > qAbs<qreal>(min) ? qAbs<qreal>(max) : qAbs<qreal>(min);
+//  _chart->axY->setRange(-_chp.y_range, _chp.y_range);
+  _chart->axY->setRange(min, max);
   
   MUTEX1.unlock();
 }
@@ -408,6 +421,8 @@ void MainWindow::on_bnResetChart_clicked()
 {
   _chart->axX->setRange(0, _chp.x_range);
   _chart->m_series->clear();
+  _chart->up_series->clear();
+  _chart->down_series->clear();
   _tick = 0;   
 }
 
@@ -415,4 +430,17 @@ void MainWindow::on_checkAutoscale_clicked(bool checked)
 {
   if(checked)
     on_bnYRangeActual_clicked();
+}
+
+void MainWindow::on_checkShowTOF_clicked(bool checked)
+{
+    if(checked) {
+        _chart->addSeries(_chart->up_series);
+        _chart->addSeries(_chart->down_series);
+    }
+    else
+    {
+        _chart->removeSeries(_chart->up_series);
+        _chart->removeSeries(_chart->down_series);
+    }
 }

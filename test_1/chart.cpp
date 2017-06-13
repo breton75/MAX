@@ -38,18 +38,30 @@
 Chart::Chart(ChartParams &params, QGraphicsItem *parent, Qt::WindowFlags wFlags):
     QChart(QChart::ChartTypeCartesian, parent, wFlags),
     m_series(0),
+    up_series(0),
+    down_series(0),
     m_step(0),
     m_x(0),
     m_y(0),
     _params(params)
 {
-  
   m_series = new QLineSeries(this);
-    QPen green(_params.line_color);
-    green.setWidth(_params.line_width);
-    m_series->setPen(green);
+  up_series = new QLineSeries(this);
+  down_series = new QLineSeries(this);
+
+    QPen red(_params.line_color);
+    red.setWidth(_params.line_width);
+    m_series->setPen(red);
     m_series->append(m_x, m_y);
-    
+
+    QPen green(QColor(0, 0, 0, 255));
+    up_series->setPen(green);
+    up_series->append(m_x, m_y);
+
+    QPen velvet(QColor(255, 0, 255, 255));
+    velvet.setStyle(Qt::DashLine);
+    down_series->setPen(velvet);
+    down_series->append(m_x, m_y);
     axX = new QValueAxis;
     axX->setRange(0, _params.x_range);
     axX->setLabelFormat("%g");
@@ -63,9 +75,21 @@ Chart::Chart(ChartParams &params, QGraphicsItem *parent, Qt::WindowFlags wFlags)
     axY->setTickCount(_params.y_tick_count);
     
     addSeries(m_series);
+
+    if(_params.show_TOF){
+        addSeries(up_series);
+        addSeries(down_series);
+    }
+
 //    createDefaultAxes();
     setAxisX(axX, m_series);
     setAxisY(axY, m_series);
+
+    setAxisX(axX, up_series);
+    setAxisY(axY, up_series);
+
+    setAxisX(axX, down_series);
+    setAxisY(axY, down_series);
     
 //    m_axis->setTickCount(20);
 //    axX()->setRange(0, 200);

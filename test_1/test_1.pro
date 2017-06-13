@@ -36,10 +36,9 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     ../../libusb-1.0.21/include/libusb-1.0/libusb.h \
     pull_usb.h \
-    pull_usb_копия.h \
     chart.h \
-    ../../Common/sv_settings.h \
-    sv_chartsettingsdialog.h
+    sv_chartsettingsdialog.h \
+    ../../Common/sv_settings.h
 
 FORMS    += mainwindow.ui \
     sv_chartsettingsdialog.ui

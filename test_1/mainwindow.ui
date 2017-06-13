@@ -64,6 +64,13 @@
        </spacer>
       </item>
       <item>
+       <widget class="QCheckBox" name="checkShowTOF">
+        <property name="text">
+         <string>Show TOF</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QLabel" name="lblTimer">
         <property name="text">
          <string>Timer</string>

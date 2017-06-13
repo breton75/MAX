@@ -53,6 +53,7 @@ struct ChartParams{
   int y_tick_count = 11;
   int line_width = 2;
   QColor line_color = Qt::red;
+  bool show_TOF = false;
 };
 
 //![1]
@@ -64,6 +65,8 @@ public:
     virtual ~Chart();
     
     QLineSeries *m_series;
+    QLineSeries *up_series;
+    QLineSeries *down_series;
     QValueAxis *axX;
     QValueAxis *axY;
 
