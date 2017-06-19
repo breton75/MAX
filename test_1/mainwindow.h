@@ -72,6 +72,10 @@ private slots:
   
   void on_checkShowTOF_clicked(bool checked);
 
+  void on_checkSaveToFile_clicked();
+
+  void on_checkSaveToFile_clicked(bool checked);
+
 private:
   Ui::MainWindow *ui;
   
@@ -88,6 +92,8 @@ private:
 //  qreal _y_range = 1;
   
   ChartParams _chp;
+
+  QFile *_file = nullptr;
    
 };
 

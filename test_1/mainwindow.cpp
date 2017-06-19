@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-
+#include "sv_fnt.h"
 
 QMutex MUTEX1;
 
@@ -17,6 +17,7 @@ MainWindow::MainWindow(QWidget *parent) :
   /* режимы отображения */
   ui->cbViewType->addItem("Скорость м/с.");
   ui->cbViewType->addItem("TOF diff нс.");
+  ui->cbViewType->addItem("(t1 + t2) / 2");
 
   /* читаем параметры программы */
   ui->spinTimer->setValue(AppParams::readParam(this, "General", "RequestTimer", 500).toInt());
@@ -247,20 +248,39 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
     qreal TOFdiff = t1 - t2;
     qreal Vsnd = 2 * L / ((t1 + t2) / 1000000000); // определяем скорость звука в среде, м/с.
     qreal Vpot = 3*Vsnd * (TOFdiff / (t1 + t2)); // определяем скорость потока, м/с.
-    
+    qreal tAvg = (t1 + t2) / 2;
+
+    qreal val;
+
 //    qDebug() << TOFdiff << Vsnd << Vpot;
 
-    qreal val = ui->cbViewType->currentIndex() == 1 ? TOFdiff : Vpot;
-    val = (t1+t2)/2;
+    switch (ui->cbViewType->currentIndex()) {
+    case 0:
+        val = Vpot;
+        break;
+    case 1:
+        val = TOFdiff;
+        break;
+    default:
+        val = tAvg;
+        break;
+    }
+//    qreal val = ui->cbViewType->currentIndex() == 1 ? TOFdiff : Vpot;
+//    if(ui->checkShowTOF->isChecked())
+//    {
+//        val = (t1 + t2) / 2;
+//        _chart->up_series->append(_tick, t1);
+//        _chart->down_series->append(_tick, ((t2))); // + t2)/2 - 76027));
+//    }
     _chart->m_series->append(_tick, val);
-    _chart->up_series->append(_tick, t1);
-    _chart->down_series->append(_tick, ((t2))); // + t2)/2 - 76027));
     _tick++;
 
     if(_tick >= _chart->axX->max())
       _chart->scroll(_chart->plotArea().width() / _chp.x_range, 0);
     
-    
+    if(_file)
+        _file->write((const char*)&val, sizeof(qreal));
+
     if(ui->checkLog->isChecked())
       ui->textLog->append(QString("%1%2\tHit Up Avg: %3\tHit Down Avg: %4\tTOF diff: %5\tVpot: %6\tVsnd: %7")
                           .arg(_tick)
@@ -443,4 +463,59 @@ void MainWindow::on_checkShowTOF_clicked(bool checked)
         _chart->removeSeries(_chart->up_series);
         _chart->removeSeries(_chart->down_series);
     }
+}
+
+void MainWindow::on_checkSaveToFile_clicked()
+{
+
+}
+
+void MainWindow::on_checkSaveToFile_clicked(bool checked)
+{
+    if(checked)
+    {
+        QDateTime dt = QDateTime::currentDateTime();
+        QString fn = ui->editFileNameTemplate->text();
+        QString path = ui->editFolderPath->text();
+        QString ext = "dat";
+
+        QString folder = svfnt::get_folder_name(dt, ext, path);
+        QString s = folder + svfnt::replace_re(dt, ext, fn) + "." + ext;
+        qDebug() << s;
+
+        MUTEX1.lock();
+
+        _file = new QFile(s);
+        bool b = _file->open(QIODevice::WriteOnly);
+
+        if(!b)
+        {
+            s = _file->errorString();
+            delete _file;
+            _file = nullptr;
+        }
+
+        MUTEX1.unlock();
+
+        if(!b)
+        {
+            QMessageBox::critical(0, "Error", s, QMessageBox::Ok);
+            ui->checkSaveToFile->setChecked(false);
+        }
+        else
+            ui->editFileNameTemplate->setEnabled(false);
+    }
+
+    else if(_file)
+    {
+        MUTEX1.lock();
+        _file->close();
+        delete _file;
+        _file = nullptr;
+        MUTEX1.unlock();
+
+        ui->editFileNameTemplate->setEnabled(true);
+    }
+
+
 }

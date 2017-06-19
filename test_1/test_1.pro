@@ -38,7 +38,8 @@ HEADERS  += mainwindow.h \
     pull_usb.h \
     chart.h \
     sv_chartsettingsdialog.h \
-    ../../Common/sv_settings.h
+    ../../Common/sv_settings.h \
+    sv_fnt.h
 
 FORMS    += mainwindow.ui \
     sv_chartsettingsdialog.ui
