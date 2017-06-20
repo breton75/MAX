@@ -39,7 +39,7 @@ HEADERS  += mainwindow.h \
     chart.h \
     sv_chartsettingsdialog.h \
     ../../Common/sv_settings.h \
-    sv_fnt.h
+    ../../Common/sv_fnt.h
 
 FORMS    += mainwindow.ui \
     sv_chartsettingsdialog.ui

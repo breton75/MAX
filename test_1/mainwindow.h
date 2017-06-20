@@ -13,6 +13,7 @@
 #include <QComboBox>
 #include <QRgb>
 #include <QTime>
+#include <QFileDialog>
 
 #include <QChart>
 #include <QtCharts/QChartView>
@@ -71,10 +72,8 @@ private slots:
 //  void tmTimeosut();
   
   void on_checkShowTOF_clicked(bool checked);
-
-  void on_checkSaveToFile_clicked();
-
   void on_checkSaveToFile_clicked(bool checked);
+  void on_bnSaveFileSelectPath_clicked();
 
 private:
   Ui::MainWindow *ui;

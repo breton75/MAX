@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include "sv_fnt.h"
+#include "../../Common/sv_fnt.h"
 
 QMutex MUTEX1;
 
@@ -25,7 +25,9 @@ MainWindow::MainWindow(QWidget *parent) :
   ui->cbViewType->setCurrentIndex(AppParams::readParam(this, "Chart", "ViewType", 0).toInt());
   ui->checkAutoscale->setChecked(AppParams::readParam(this, "Chart", "Autoscale", true).toBool());
   ui->cbDevices->setCurrentIndex(ui->cbDevices->findText(AppParams::readParam(this, "General", "LastDeviceName", "").toString()));
-  ui->checkShowTOF->setChecked(AppParams::readParam(this, "Chart", "ShowTOF", false).toBool());
+//  ui->checkShowTOF->setChecked(AppParams::readParam(this, "Chart", "ShowTOF", false).toBool());
+  ui->editSaveFileNameTemplate->setText(AppParams::readParam(this, "General", "SaveFileNameTemplate", "").toString());
+  ui->editSaveFilePath->setText(AppParams::readParam(this, "General", "SaveFilePath", "").toString());
 
   _chp.x_range = AppParams::readParam(this, "Chart", "x_range", 300).toInt();
   ui->spinXRange->setValue(_chp.x_range);
@@ -34,7 +36,7 @@ MainWindow::MainWindow(QWidget *parent) :
   _chp.y_tick_count = AppParams::readParam(this, "Chart", "y_tick_count", 11).toInt();
   _chp.line_color = QColor(AppParams::readParam(this, "Chart", "line_color", 0xFFFF0000).toUInt());
   _chp.line_width = AppParams::readParam(this, "Chart", "line_width", 2).toInt();
-  _chp.show_TOF = ui->checkShowTOF->isChecked();
+//  _chp.show_TOF = ui->checkShowTOF->isChecked();
 
   _chart = new Chart(_chp); 
   _chart->legend()->hide();
@@ -77,10 +79,13 @@ MainWindow::~MainWindow()
   AppParams::saveParam(this, "General", "RequestTimer", ui->spinTimer->value());
   AppParams::saveParam(this, "General", "Log", ui->checkLog->isChecked());
   AppParams::saveParam(this, "General", "LastDeviceName", ui->cbDevices->currentText());
+  AppParams::saveParam(this, "General", "SaveFileNameTemplate", ui->editSaveFileNameTemplate->text());
+  AppParams::saveParam(this, "General", "SaveFilePath", ui->editSaveFilePath->text());
   AppParams::saveParam(this, "Chart", "ViewType", ui->cbViewType->currentIndex());
   AppParams::saveParam(this, "Chart", "Autoscale", ui->checkAutoscale->isChecked());
   AppParams::saveParam(this, "Chart", "x_range", _chp.x_range);
-  AppParams::saveParam(this, "Chart", "ShowTOF", ui->checkShowTOF->isChecked());
+//  AppParams::saveParam(this, "Chart", "ShowTOF", ui->checkShowTOF->isChecked());
+
   delete ui;
 }
 
@@ -204,33 +209,11 @@ void MainWindow::on_bnCycle_clicked()
       libusb_close(handle);  // закрываем устройство
       libusb_exit(NULL);  // завершаем работу с библиотекой  
       
-      ui->bnCycle->setText("Cycle");
+      ui->bnCycle->setText("Start");
       ui->bnCycle->setEnabled(true);
   }
  
 }
-
-//void MainWindow::tmTimeout()
-//{
-//  qDebug() << "tm";
-//  MUTEX1.lock();
-//  QGraphicsLineItem *l =_chart->scene()->addLine(_tick * _chart->plotArea().width() / _chp.x_range, -1, _tick * _chart->plotArea().width() / _chp.x_range, 1, QPen(Qt::blue));
-//  l->setZValue(100);
-//  l->show();
-//  MUTEX1.unlock();
-  
-//    _thr->stop();
-//    _thr->deleteLater(); // 
-//    delete _thr;
-//    _thr = nullptr;
-    
-//    libusb_release_interface(handle, 0); // отпускаем интерфейс 0
-//    libusb_close(handle);  // закрываем устройство
-//    libusb_exit(NULL);  // завершаем работу с библиотекой  
-    
-//    ui->bnCycle->setText("Cycle");
-//    ui->bnCycle->setEnabled(true);
-//}
 
 void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *max_data*/)
 {
@@ -465,21 +448,21 @@ void MainWindow::on_checkShowTOF_clicked(bool checked)
     }
 }
 
-void MainWindow::on_checkSaveToFile_clicked()
-{
-
-}
-
 void MainWindow::on_checkSaveToFile_clicked(bool checked)
 {
-    if(checked)
-    {
+    if(checked) {
         QDateTime dt = QDateTime::currentDateTime();
-        QString fn = ui->editFileNameTemplate->text();
-        QString path = ui->editFolderPath->text();
+        QString fn = ui->editSaveFileNameTemplate->text();
+        QString path = ui->editSaveFilePath->text();
         QString ext = "dat";
 
         QString folder = svfnt::get_folder_name(dt, ext, path);
+        if(folder.isEmpty()) {
+            QMessageBox::critical(0, "Error", "Неверный путь для сохранения", QMessageBox::Ok);
+            ui->checkSaveToFile->setChecked(false);
+            return;
+        }
+
         QString s = folder + svfnt::replace_re(dt, ext, fn) + "." + ext;
         qDebug() << s;
 
@@ -488,8 +471,7 @@ void MainWindow::on_checkSaveToFile_clicked(bool checked)
         _file = new QFile(s);
         bool b = _file->open(QIODevice::WriteOnly);
 
-        if(!b)
-        {
+        if(!b) {
             s = _file->errorString();
             delete _file;
             _file = nullptr;
@@ -497,13 +479,11 @@ void MainWindow::on_checkSaveToFile_clicked(bool checked)
 
         MUTEX1.unlock();
 
-        if(!b)
-        {
+        if(!b) {
             QMessageBox::critical(0, "Error", s, QMessageBox::Ok);
             ui->checkSaveToFile->setChecked(false);
         }
-        else
-            ui->editFileNameTemplate->setEnabled(false);
+
     }
 
     else if(_file)
@@ -514,8 +494,12 @@ void MainWindow::on_checkSaveToFile_clicked(bool checked)
         _file = nullptr;
         MUTEX1.unlock();
 
-        ui->editFileNameTemplate->setEnabled(true);
     }
+}
 
-
+void MainWindow::on_bnSaveFileSelectPath_clicked()
+{
+    QString path = QFileDialog::getExistingDirectory(this, tr("Путь для сохранения файлов"));
+    if(!path.isEmpty())
+        ui->editSaveFilePath->setText(path);
 }

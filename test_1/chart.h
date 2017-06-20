@@ -56,7 +56,18 @@ struct ChartParams{
   bool show_TOF = false;
 };
 
-//![1]
+class Chart;
+class SvChartWidget: public QWidget
+{
+    Q_OBJECT
+
+public:
+    SvChartWidget(QWidget *parent = 0);
+
+    Chart chart;
+
+};
+
 class Chart: public QChart
 {
     Q_OBJECT
