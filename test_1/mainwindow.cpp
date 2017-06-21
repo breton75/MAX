@@ -23,32 +23,35 @@ MainWindow::MainWindow(QWidget *parent) :
   ui->spinTimer->setValue(AppParams::readParam(this, "General", "RequestTimer", 500).toInt());
   ui->checkLog->setChecked(AppParams::readParam(this, "General", "Log", true).toBool());
   ui->cbViewType->setCurrentIndex(AppParams::readParam(this, "Chart", "ViewType", 0).toInt());
-  ui->checkAutoscale->setChecked(AppParams::readParam(this, "Chart", "Autoscale", true).toBool());
   ui->cbDevices->setCurrentIndex(ui->cbDevices->findText(AppParams::readParam(this, "General", "LastDeviceName", "").toString()));
 //  ui->checkShowTOF->setChecked(AppParams::readParam(this, "Chart", "ShowTOF", false).toBool());
   ui->editSaveFileNameTemplate->setText(AppParams::readParam(this, "General", "SaveFileNameTemplate", "").toString());
   ui->editSaveFilePath->setText(AppParams::readParam(this, "General", "SaveFilePath", "").toString());
 
   _chp.x_range = AppParams::readParam(this, "Chart", "x_range", 300).toInt();
-  ui->spinXRange->setValue(_chp.x_range);
   _chp.x_tick_count = AppParams::readParam(this, "Chart", "x_tick_count", 26).toInt();
+  _chp.y_autoscale = AppParams::readParam(this, "Chart", "y_autoscale", false).toBool();
   _chp.y_range = AppParams::readParam(this, "Chart", "y_range", 5).toInt();
   _chp.y_tick_count = AppParams::readParam(this, "Chart", "y_tick_count", 11).toInt();
   _chp.line_color = QColor(AppParams::readParam(this, "Chart", "line_color", 0xFFFF0000).toUInt());
   _chp.line_width = AppParams::readParam(this, "Chart", "line_width", 2).toInt();
 //  _chp.show_TOF = ui->checkShowTOF->isChecked();
 
-  _chart = new Chart(_chp); 
-  _chart->legend()->hide();
-  _chart->setAnimationOptions(QChart::NoAnimation);
+  _chart_w = new svchart::SvChartWidget(_chp);
+  _chart_w->setParent(this);
+  ui->horizontalLayout_2->addWidget(_chart_w);
   
-  chartView = new QChartView(_chart);
-  chartView->setRenderHint(QPainter::Antialiasing);
-  chartView->setParent(this);
-//  chartView->setGeometry(0,0,1200, 800);
-  chartView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-  chartView->setRubberBand(QChartView::RectangleRubberBand);
-  ui->verticalLayout_2->addWidget(chartView);
+//  _chart = new svchart::Chart(_chp); 
+//  _chart->legend()->hide();
+//  _chart->setAnimationOptions(QChart::NoAnimation);
+  
+//  chartView = new QChartView(_chart);
+//  chartView->setRenderHint(QPainter::Antialiasing);
+//  chartView->setParent(this);
+////  chartView->setGeometry(0,0,1200, 800);
+//  chartView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+//  chartView->setRubberBand(QChartView::RectangleRubberBand);
+//  ui->verticalLayout_2->addWidget(chartView);
   
   /* параметры окна */
   AppParams::WindowParams p = AppParams::readWindowParams(this);
@@ -82,8 +85,8 @@ MainWindow::~MainWindow()
   AppParams::saveParam(this, "General", "SaveFileNameTemplate", ui->editSaveFileNameTemplate->text());
   AppParams::saveParam(this, "General", "SaveFilePath", ui->editSaveFilePath->text());
   AppParams::saveParam(this, "Chart", "ViewType", ui->cbViewType->currentIndex());
-  AppParams::saveParam(this, "Chart", "Autoscale", ui->checkAutoscale->isChecked());
-  AppParams::saveParam(this, "Chart", "x_range", _chp.x_range);
+  AppParams::saveParam(this, "Chart", "Autoscale", _chart_w->params().y_autoscale);
+  AppParams::saveParam(this, "Chart", "x_range", _chart_w->params().x_range);
 //  AppParams::saveParam(this, "Chart", "ShowTOF", ui->checkShowTOF->isChecked());
 
   delete ui;
@@ -255,11 +258,11 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
 //        _chart->up_series->append(_tick, t1);
 //        _chart->down_series->append(_tick, ((t2))); // + t2)/2 - 76027));
 //    }
-    _chart->m_series->append(_tick, val);
+    _chart_w->chart()->m_series->append(_tick, val);
     _tick++;
 
-    if(_tick >= _chart->axX->max())
-      _chart->scroll(_chart->plotArea().width() / _chp.x_range, 0);
+    if(_tick >= _chart_w->chart()->axX->max())
+      _chart_w->chart()->scroll(_chart_w->chart()->plotArea().width() / _chp.x_range, 0);
     
     if(_file)
         _file->write((const char*)&val, sizeof(qreal));
@@ -270,14 +273,14 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
                           .arg(QTime::currentTime().toString("mm:ss.zzz"))
                           .arg(t1).arg(t2).arg(TOFdiff, 0, 'f', 6).arg(Vpot, 0, 'f', 3).arg(Vsnd, 0, 'f', 4));
     
-    if(ui->checkAutoscale->isChecked() & (qAbs<qreal>(val) > qAbs<qreal>(_chp.y_range)))
+    if(_chart_w->params().y_autoscale & (qAbs<qreal>(val) > qAbs<qreal>(_chp.y_range)))
     {
       qreal y1 = qAbs<qreal>(val) - 1.1;
       qreal y2 = qAbs<qreal>(val) + 1.1;
-      _chart->axisY()->setRange(y1, y2);
+      _chart_w->chart()->axisY()->setRange(y1, y2);
 //      _chp.y_range = qAbs<qreal>(val) * 1.1;
 //      _chart->axisY()->setRange(-_chp.y_range, _chp.y_range);
-      _chart->update();
+      _chart_w->chart()->update();
     }
     
     MUTEX1.unlock();
@@ -296,12 +299,10 @@ void MainWindow::on_cbViewType_currentIndexChanged(int index)
 {
   Q_UNUSED(index);
   
-  if(!_chart) return;
+  if(!_chart_w) return;
   
-  _chart->scroll(-_tick, 0);
-  _chart->m_series->clear();
-  _chart->up_series->clear();
-  _chart->down_series->clear();
+  _chart_w->chart()->scroll(-_tick, 0);
+  _chart_w->chart()->m_series->clear();
   _tick = 0;
 }
 
@@ -351,102 +352,7 @@ void SvPullUsb::stop()
   while(!_finished) QApplication::processEvents();
 }
 
-
-/** ****************************** **/
-
-
-void MainWindow::on_actionChartSettings_triggered()
-{
-    
-}
-
-void MainWindow::on_bnSetXRange_clicked()
-{
-  _chart->axX->setRange(0, ui->spinXRange->value());  
-  _chp.x_range = ui->spinXRange->value();
-}
-
-void MainWindow::on_bnYRangeUp_clicked()
-{
-  _chp.y_range = ((_chart->axY->max() - _chart->axY->min()) / 2) * 1.25;
-  _chp.y_range = _chp.y_range < 1 ? 1 : _chp.y_range;
-  _chart->axY->setRange(-_chp.y_range, _chp.y_range);
-}
-
-void MainWindow::on_bnYRangeDown_clicked()
-{
-  _chp.y_range = ((_chart->axY->max() - _chart->axY->min()) / 2) / 1.25;
-  _chp.y_range = _chp.y_range < 1 ? 1 : _chp.y_range;
-  _chart->axY->setRange(-_chp.y_range, _chp.y_range);
-}
-
-void MainWindow::on_bnXRangeUp_clicked()
-{
-  _chp.x_range *= 1.25;
-  _chart->axX->setRange(0, _chp.x_range);
-  _chart->update();
-}
-
-void MainWindow::on_bnXRangeDown_clicked()
-{
-  _chp.x_range /= 1.25;
-  _chart->axX->setRange(0, _chp.x_range);
-}
-
-void MainWindow::on_bnYRangeActual_clicked()
-{
-  MUTEX1.lock();
-  
-  qreal max = -1000000000;
-  qreal min = 1000000000;
-  
-  foreach (QPointF pnt, _chart->m_series->pointsVector()) {
-    if(pnt.y() > max)
-      max = pnt.y();
-    
-    if(pnt.y() < min)
-      min = pnt.y();
-  }
-  
-//  _chp.y_range = qAbs<qreal>(max) > qAbs<qreal>(min) ? qAbs<qreal>(max) : qAbs<qreal>(min);
-//  _chart->axY->setRange(-_chp.y_range, _chp.y_range);
-  _chart->axY->setRange(min, max);
-  
-  MUTEX1.unlock();
-}
-
-void MainWindow::on_bnXRangeActual_clicked()
-{
-  _chart->axX->setRange(0, _tick);
-}
-
-void MainWindow::on_bnResetChart_clicked()
-{
-  _chart->axX->setRange(0, _chp.x_range);
-  _chart->m_series->clear();
-  _chart->up_series->clear();
-  _chart->down_series->clear();
-  _tick = 0;   
-}
-
-void MainWindow::on_checkAutoscale_clicked(bool checked)
-{
-  if(checked)
-    on_bnYRangeActual_clicked();
-}
-
-void MainWindow::on_checkShowTOF_clicked(bool checked)
-{
-    if(checked) {
-        _chart->addSeries(_chart->up_series);
-        _chart->addSeries(_chart->down_series);
-    }
-    else
-    {
-        _chart->removeSeries(_chart->up_series);
-        _chart->removeSeries(_chart->down_series);
-    }
-}
+/** ****************************************** **/
 
 void MainWindow::on_checkSaveToFile_clicked(bool checked)
 {

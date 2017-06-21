@@ -25,7 +25,7 @@ QT_CHARTS_USE_NAMESPACE
 
 #include "libusb.h"
 #include "pull_usb.h"
-#include "chart.h"
+#include "sv_chartwidget.h"
 
 #include "../../Common/sv_settings.h"
 
@@ -56,25 +56,10 @@ private slots:
   
   void new_data(pullusb::fres *result);
   
-  void on_actionChartSettings_triggered();
- 
-  void on_bnSetXRange_clicked();
-  void on_bnYRangeUp_clicked();
-  void on_bnYRangeDown_clicked();
-  void on_bnXRangeUp_clicked();
-  void on_bnXRangeDown_clicked();
-  void on_bnYRangeActual_clicked();
-  void on_bnXRangeActual_clicked();
-  void on_bnResetChart_clicked();
-  
-  void on_checkAutoscale_clicked(bool checked);
-  
-//  void tmTimeosut();
-  
-  void on_checkShowTOF_clicked(bool checked);
   void on_checkSaveToFile_clicked(bool checked);
   void on_bnSaveFileSelectPath_clicked();
 
+ 
 private:
   Ui::MainWindow *ui;
   
@@ -85,12 +70,15 @@ private:
   
   pullusb::MAX35101EV_ANSWER _max_data;
   
-  Chart *_chart = nullptr;
+//  svchart::Chart *_chart = nullptr;
   QChartView *chartView;
+  
+  svchart::SvChartWidget *_chart_w = nullptr;
+  
   int _tick = 0;
 //  qreal _y_range = 1;
   
-  ChartParams _chp;
+  svchart::ChartParams _chp;
 
   QFile *_file = nullptr;
    
