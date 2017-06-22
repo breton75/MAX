@@ -409,3 +409,41 @@ void MainWindow::on_bnSaveFileSelectPath_clicked()
     if(!path.isEmpty())
         ui->editSaveFilePath->setText(path);
 }
+
+void MainWindow::on_bnOpenFile_clicked()
+{
+  QDateTime dt = QDateTime::currentDateTime();
+  QString dirpath = ui->editSaveFilePath->text();
+  QString ext = "dat";
+  
+  QDir dir(svfnt::get_folder_name(dt, ext, dirpath));
+  if(!dir.exists())
+    dir.setPath(QDir::currentPath());
+  
+  QString fn = QFileDialog::getOpenFileName(this, tr("Открыть файл"), dir.path(), "dat file (*.dat);;all files (*.*)");
+  
+  if(fn.isEmpty()) return;
+  
+  QFile f(fn);
+  if(!f.open(QIODevice::ReadOnly)) {
+    QMessageBox::critical(this, "Error", f.errorString(), QMessageBox::Ok);
+    return;
+  }
+  
+  qreal t = 0;
+  svchart::ChartParams p = _chart_w->params();
+  svchart::SvChartWidget *chart = new svchart::SvChartWidget(p);
+  
+  qreal val;
+  while(!f.atEnd()) {
+    f.read((char*)(&val), sizeof(qreal));
+    
+    chart->chart()->m_series->append(qreal(t++), val);
+//    t++;
+  }
+  
+  f.close();
+
+  chart->show();
+  
+}

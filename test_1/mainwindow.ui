@@ -186,7 +186,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="bnOpenFile">
         <property name="text">
          <string>Open file</string>
         </property>

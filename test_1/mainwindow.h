@@ -60,6 +60,8 @@ private slots:
   void on_bnSaveFileSelectPath_clicked();
 
  
+  void on_bnOpenFile_clicked();
+  
 private:
   Ui::MainWindow *ui;
   
