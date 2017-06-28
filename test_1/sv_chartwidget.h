@@ -42,6 +42,7 @@
 #include <QFrame>
 #include <QSpinBox>
 
+#include "qcustomplot.h"
 
 QT_CHARTS_BEGIN_NAMESPACE
 class QSplineSeries;
@@ -69,7 +70,7 @@ namespace svchart {
   };
   
   
-  class Chart;
+//  class Chart;
   class SvChartWidget;
   
 }
@@ -82,18 +83,24 @@ class svchart::SvChartWidget: public QWidget
 public:
     SvChartWidget(svchart::ChartParams &params, Qt::WindowFlags wFlags = 0, QWidget *parent = 0);
     
-    svchart::Chart *chart() { return _chart; }
+    QCustomPlot *customplot() { return _customplot; }
     svchart::ChartParams params() { return _params; }
     
+    void setActualYRange();
+    
+    void setChartYmax(qreal y) { if(y > _y_max) _y_max = y * 1.01; }
+    void setChartYmin(qreal y) { if(y < _y_min) _y_min = y * 1.01; }
     
     QMutex mutex;
     
 private:
-    svchart::Chart *_chart;
-    QChartView *_chartView;
+    
+    QCustomPlot *_customplot;
+    
     svchart::ChartParams _params;
     
-    
+    qreal _y_max;
+    qreal _y_min;
     
     /** виджеты **/
     void setupUi();
@@ -141,31 +148,31 @@ private slots:
 
 
 
-class svchart::Chart: public QChart
-{
-    Q_OBJECT
-public:
-    Chart(ChartParams &params, QGraphicsItem *parent = Q_NULLPTR, Qt::WindowFlags wFlags = 0);
-    virtual ~Chart();
+//class svchart::Chart: public QChart
+//{
+//    Q_OBJECT
+//public:
+//    Chart(ChartParams &params, QGraphicsItem *parent = Q_NULLPTR, Qt::WindowFlags wFlags = 0);
+//    virtual ~Chart();
     
-    QLineSeries *m_series;
-    QValueAxis *axX;
-    QValueAxis *axY;
+//    QLineSeries *m_series;
+//    QValueAxis *axX;
+//    QValueAxis *axY;
 
-private:
-    QStringList m_titles;
-    qreal m_step;
-    qreal m_x;
-    qreal m_y;
+//private:
+//    QStringList m_titles;
+//    qreal m_step;
+//    qreal m_x;
+//    qreal m_y;
     
-    svchart::ChartParams _params;
+//    svchart::ChartParams _params;
     
-protected:
-    bool sceneEvent(QEvent *event);
+//protected:
+//    bool sceneEvent(QEvent *event);
 
-private:
-    bool gestureEvent(QGestureEvent *event);
-};
+//private:
+//    bool gestureEvent(QGestureEvent *event);
+//};
 
 
 #endif /* SV_CHARTWIDGET_H */

@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui charts
+QT       += core gui charts printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -30,7 +30,8 @@ SOURCES += main.cpp\
     pull_usb.cpp \
     ../../Common/sv_settings.cpp \
     sv_chartsettingsdialog.cpp \
-    sv_chartwidget.cpp
+    sv_chartwidget.cpp \
+    ../../Common/qcustomplot/qcustomplot.cpp
 
 
 HEADERS  += mainwindow.h \
@@ -39,7 +40,8 @@ HEADERS  += mainwindow.h \
     sv_chartsettingsdialog.h \
     ../../Common/sv_settings.h \
     ../../Common/sv_fnt.h \
-    sv_chartwidget.h
+    sv_chartwidget.h \
+    ../../Common/qcustomplot/qcustomplot.h
 
 FORMS    += mainwindow.ui \
     sv_chartsettingsdialog.ui
@@ -48,6 +50,9 @@ win32: LIBS += -L$$PWD/../../libusb-1.0.21/MinGW32/dll/ -llibusb-1.0
 
 INCLUDEPATH += $$PWD/../../libusb-1.0.21/include/libusb-1.0
 DEPENDPATH += $$PWD/../../libusb-1.0.21/include/libusb-1.0
+
+INCLUDEPATH += $$PWD/../../Common/qcustomplot
+DEPENDPATH += $$PWD/../../Common/qcustomplot
 
 RESOURCES += \
     res.qrc

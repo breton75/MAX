@@ -33,7 +33,11 @@ namespace Ui {
 class MainWindow;
 }
 
-
+struct GraphInfo {
+  int type_id;
+  QString name;
+  QCPGraph *graph;
+};
 
 class SvPullUsb;
 
@@ -62,6 +66,8 @@ private slots:
  
   void on_bnOpenFile_clicked();
   
+  void on_bnAddGraph_clicked();
+  
 private:
   Ui::MainWindow *ui;
   
@@ -73,9 +79,13 @@ private:
   pullusb::MAX35101EV_ANSWER _max_data;
   
 //  svchart::Chart *_chart = nullptr;
-  QChartView *chartView;
+//  QChartView *chartView;
   
   svchart::SvChartWidget *_chart_w = nullptr;
+  QMap<int, QString> _plot_types;
+  
+  
+  QMap<int, QCPGraph*> _graphs;
   
   int _tick = 0;
 //  qreal _y_range = 1;

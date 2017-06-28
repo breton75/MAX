@@ -15,14 +15,22 @@ MainWindow::MainWindow(QWidget *parent) :
   on_bnGetDeviceList_clicked();
   
   /* режимы отображения */
-  ui->cbViewType->addItem("Скорость м/с.");
-  ui->cbViewType->addItem("TOF diff нс.");
-  ui->cbViewType->addItem("(t1 + t2) / 2");
+  _plot_types = {{0, "Скорость м/с."},
+                 {1, "TOF diff нс."},
+                 {2, "(t1 + t2) / 2"}};
+
+  foreach (int key, _plot_types.keys()) {
+    ui->cbViewType->addItem(_plot_types.value(key), QVariant(key));
+  }
+  
+//  ui->cbViewType->addItem("Скорость м/с.");
+//  ui->cbViewType->addItem("TOF diff нс.");
+//  ui->cbViewType->addItem("(t1 + t2) / 2");
 
   /* читаем параметры программы */
   ui->spinTimer->setValue(AppParams::readParam(this, "General", "RequestTimer", 500).toInt());
   ui->checkLog->setChecked(AppParams::readParam(this, "General", "Log", true).toBool());
-  ui->cbViewType->setCurrentIndex(AppParams::readParam(this, "Chart", "ViewType", 0).toInt());
+  ui->cbViewType->setCurrentIndex(ui->cbViewType->findData(AppParams::readParam(this, "Chart", "ViewType", 0)));
   ui->cbDevices->setCurrentIndex(ui->cbDevices->findText(AppParams::readParam(this, "General", "LastDeviceName", "").toString()));
 //  ui->checkShowTOF->setChecked(AppParams::readParam(this, "Chart", "ShowTOF", false).toBool());
   ui->editSaveFileNameTemplate->setText(AppParams::readParam(this, "General", "SaveFileNameTemplate", "").toString());
@@ -40,6 +48,7 @@ MainWindow::MainWindow(QWidget *parent) :
   _chart_w = new svchart::SvChartWidget(_chp);
   _chart_w->setParent(this);
   ui->horizontalLayout_2->addWidget(_chart_w);
+  
   
 //  _chart = new svchart::Chart(_chp); 
 //  _chart->legend()->hide();
@@ -236,52 +245,65 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
     qreal Vpot = 3*Vsnd * (TOFdiff / (t1 + t2)); // определяем скорость потока, м/с.
     qreal tAvg = (t1 + t2) / 2;
 
-    qreal val;
-
-//    qDebug() << TOFdiff << Vsnd << Vpot;
-
-    switch (ui->cbViewType->currentIndex()) {
-    case 0:
-        val = Vpot;
-        break;
-    case 1:
-        val = TOFdiff;
-        break;
-    default:
-        val = tAvg;
-        break;
-    }
-//    qreal val = ui->cbViewType->currentIndex() == 1 ? TOFdiff : Vpot;
-//    if(ui->checkShowTOF->isChecked())
-//    {
-//        val = (t1 + t2) / 2;
-//        _chart->up_series->append(_tick, t1);
-//        _chart->down_series->append(_tick, ((t2))); // + t2)/2 - 76027));
-//    }
-    _chart_w->chart()->m_series->append(_tick, val);
-    _tick++;
-
-    if(_tick >= _chart_w->chart()->axX->max())
-      _chart_w->chart()->scroll(_chart_w->chart()->plotArea().width() / _chp.x_range, 0);
+    QMap<int, qreal> curValues;
+    curValues.clear();
+    int tick;
     
-    if(_file)
-        _file->write((const char*)&val, sizeof(qreal));
+    foreach (int key, _graphs.keys()) {
+      
+      qreal val;
+      switch (key) {
+      case 0:
+          val = Vpot;
+//          curValues.insert(key, Vpot);
+          break;
+      case 1:
+          val = TOFdiff;
+//          curValues.insert(key, TOFdiff);
+          break;
+      default:
+          val = tAvg;
+//          curValues.insert(key, tAvg);
+          break;
+      }
+      
+      tick = _graphs.value(key)->data()->count();
+      _graphs.value(key)->data()->insert(double(tick), QCPData(double(tick), val));
+      _chart_w->setChartYmax(val);
+      _chart_w->setChartYmin(val);
+      
+//      _graphs.value(key)->data()->insert(double(tick), QCPData(double(tick), curValues.value(key)));
+      
+    }
+    
+//    _chart_w->customplot()->replot();
+    
+    
+    if(_file && ui->cbViewType_2->currentData().isValid()) {
+      qreal v = curValues.value(ui->cbViewType_2->currentData().toInt());
+        _file->write((const char*)&v, sizeof(qreal));
+    }
 
     if(ui->checkLog->isChecked())
       ui->textLog->append(QString("%1%2\tHit Up Avg: %3\tHit Down Avg: %4\tTOF diff: %5\tVpot: %6\tVsnd: %7")
-                          .arg(_tick)
+                          .arg(tick)
                           .arg(QTime::currentTime().toString("mm:ss.zzz"))
                           .arg(t1).arg(t2).arg(TOFdiff, 0, 'f', 6).arg(Vpot, 0, 'f', 3).arg(Vsnd, 0, 'f', 4));
     
-    if(_chart_w->params().y_autoscale & (qAbs<qreal>(val) > qAbs<qreal>(_chp.y_range)))
-    {
-      qreal y1 = qAbs<qreal>(val) - 1.1;
-      qreal y2 = qAbs<qreal>(val) + 1.1;
-      _chart_w->chart()->axisY()->setRange(y1, y2);
-//      _chp.y_range = qAbs<qreal>(val) * 1.1;
-//      _chart->axisY()->setRange(-_chp.y_range, _chp.y_range);
-      _chart_w->chart()->update();
+    if(_chart_w->params().y_autoscale) {
+      _chart_w->setActualYRange();
     }
+    _chart_w->customplot()->replot();
+      
+//    {
+////      (qAbs<qreal>(val) > qAbs<qreal>(_chp.y_range)))
+//      qreal y1 = qAbs<qreal>(val) - 1.1;
+//      qreal y2 = qAbs<qreal>(val) + 1.1;
+//      _chart_w->chart()->axisY()->setRange(y1, y2);
+////      _chp.y_range = qAbs<qreal>(val) * 1.1;
+////      _chart->axisY()->setRange(-_chp.y_range, _chp.y_range);
+//      _chart_w->chart()->update();
+//    }
     
     MUTEX1.unlock();
     
@@ -301,9 +323,9 @@ void MainWindow::on_cbViewType_currentIndexChanged(int index)
   
   if(!_chart_w) return;
   
-  _chart_w->chart()->scroll(-_tick, 0);
-  _chart_w->chart()->m_series->clear();
-  _tick = 0;
+//  _chart_w->chart()->scroll(-_tick, 0);
+//  _chart_w->chart()->m_series->clear();
+//  _tick = 0;
 }
 
 
@@ -430,20 +452,37 @@ void MainWindow::on_bnOpenFile_clicked()
     return;
   }
   
-  qreal t = 0;
+  int t = 0;
   svchart::ChartParams p = _chart_w->params();
   svchart::SvChartWidget *chart = new svchart::SvChartWidget(p);
   
   qreal val;
+  QCPGraph *graph = _chart_w->customplot()->addGraph();
   while(!f.atEnd()) {
     f.read((char*)(&val), sizeof(qreal));
     
-    chart->chart()->m_series->append(qreal(t++), val);
-//    t++;
+    graph->data()->insert(t, QCPData(double(t), val));
+//    chart->chart()->m_series->append(qreal(t++), val);
+    t++;
   }
   
   f.close();
 
   chart->show();
+  
+}
+
+void MainWindow::on_bnAddGraph_clicked()
+{
+  int key = ui->cbViewType->currentData().toInt();
+  
+  /* если такой график уже есть, то ничего не добавляем и выходим */
+  if(_graphs.find(key) != _graphs.end())
+    return;
+  
+  _graphs.insert(key, _chart_w->customplot()->addGraph());
+  
+  ui->cbViewType_2->addItem(ui->cbViewType->currentText(), ui->cbViewType->currentData());
+  ui->cbViewType_2->setCurrentIndex(ui->cbViewType_2->findData(key));
   
 }

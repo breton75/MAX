@@ -35,6 +35,7 @@
 #include <QtCore/QDebug>
 #include <QtWidgets/QGesture>
 
+
 svchart::SvChartWidget::SvChartWidget(ChartParams &params, Qt::WindowFlags wFlags, QWidget *parent)
 {
   this->setParent(parent);
@@ -46,6 +47,9 @@ svchart::SvChartWidget::SvChartWidget(ChartParams &params, Qt::WindowFlags wFlag
   
   spinXRange->setValue(_params.x_range);
   bnYAutoscale->setChecked(_params.y_autoscale);  
+  
+  on_bnResetChart_clicked();
+  
 }
 
 void svchart::SvChartWidget::setupUi()
@@ -205,29 +209,20 @@ void svchart::SvChartWidget::setupUi()
 
     vlayYRange->addItem(vspacer4);
 
-
     hlay2->addWidget(frameYRange);
 
-    _chart = new Chart(_params);
-    _chart->setObjectName(QStringLiteral("_chart"));
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    sizePolicy.setHorizontalStretch(0);
-    sizePolicy.setVerticalStretch(0);
-    sizePolicy.setHeightForWidth(_chart->sizePolicy().hasHeightForWidth());
-    _chart->setSizePolicy(sizePolicy);
-//    _chart->setStyleSheet(QStringLiteral("background-color: rgb(255, 255, 255);"));
 
-    _chart->legend()->hide();
-    _chart->setAnimationOptions(QChart::NoAnimation);
+    _customplot = new QCustomPlot(this);
+    _customplot->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    _customplot->xAxis->setRange(0, _params.x_range, Qt::AlignLeft);
     
-    _chartView = new QChartView(_chart);
-    _chartView->setRenderHint(QPainter::Antialiasing);
-    _chartView->setParent(this);
-    _chartView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    _chartView->setRubberBand(QChartView::RectangleRubberBand);
+    _customplot->yAxis->setRange(0, 1, Qt::AlignCenter);
+//    _customplot->axisRect()->setupFullAxesBox(true);
+//    _customplot->yAxis->setScaleType(QCPAxis::stLogarithmic);
+    _customplot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
     
-    hlay2->addWidget(_chartView);
-
+    hlay2->addWidget(_customplot);
+    
     vlayMain->addLayout(hlay2);
 
 
@@ -239,131 +234,148 @@ void svchart::SvChartWidget::setupUi()
 void svchart::SvChartWidget::on_bnXRangeUp_clicked()
 {
   _params.x_range *= 1.25;
-  _chart->axX->setRange(0, _params.x_range);
+  _customplot->xAxis->setRangeUpper(_params.x_range);
+  _customplot->replot(QCustomPlot::rpQueued);
 }
 
 void svchart::SvChartWidget::on_bnXRangeDown_clicked()
 {
   _params.x_range /= 1.25;
-  _chart->axX->setRange(0, _params.x_range);
+  _customplot->xAxis->setRangeUpper(_params.x_range);
+  _customplot->replot(QCustomPlot::rpQueued);
 }
 
 void svchart::SvChartWidget::on_bnXRangeActual_clicked()
 {
-  _chart->axX->setRange(0, _chart->m_series->pointsVector().count());
+  _customplot->xAxis->setRange(0, _customplot->graph()->data()->count(), Qt::AlignLeft);
+  _customplot->replot(QCustomPlot::rpQueued);
 }
 
 void svchart::SvChartWidget::on_bnXSetRange_clicked()
 {
-  
+  _params.x_range = spinXRange->value();
+  _customplot->xAxis->setRangeUpper(_params.x_range);
+  _customplot->replot(QCustomPlot::rpQueued);
 }
 
 void svchart::SvChartWidget::on_bnYRangeUp_clicked()
 {
-  qreal r = (_chart->axY->max() - _chart->axY->min()) * 0.25;
-  _chart->axY->setRange(_chart->axY->min() + r, _chart->axY->max() - r);
+  _customplot->yAxis->setRangeUpper(_customplot->yAxis->range().upper * 1.25);
+  _customplot->yAxis->setRangeLower(_customplot->yAxis->range().lower * 1.25);
+  _customplot->replot(QCustomPlot::rpQueued);
 }
 
 void svchart::SvChartWidget::on_bnYRangeDown_clicked()
 {
-  qreal r = (_chart->axY->max() - _chart->axY->min()) * 0.25;
-  _chart->axY->setRange(_chart->axY->min() - r, _chart->axY->max() + r);
+  _customplot->yAxis->setRangeUpper(_customplot->yAxis->range().upper * 0.75);
+  _customplot->yAxis->setRangeLower(_customplot->yAxis->range().lower * 0.75);
+  _customplot->replot(QCustomPlot::rpQueued);
 }
 
 void svchart::SvChartWidget::on_bnYRangeActual_clicked()
 {
-  if(_chart->m_series->pointsVector().isEmpty())
-    return;
+  setActualYRange();
   
-  qreal max = -1000000000;
-  qreal min = 1000000000;
+  //  qreal max = -1000000000;
+//  qreal min =  1000000000;
+//  for(int i = 0; i < _customplot->graphCount(); i++)
+//  {
+//    foreach (int key, _customplot->graph(i)->data()->keys()) {
+//      qreal y = _customplot->graph(i)->data()->value(key).value;
+//      if(y > max) max = y;
+//      if(y < min) min = y;
+//    }
+//  }
   
-  foreach (QPointF pnt, _chart->m_series->pointsVector()) {
-    if(pnt.y() > max) max = pnt.y();
-    if(pnt.y() < min) min = pnt.y();
-  }
+}
+
+void svchart::SvChartWidget::setActualYRange()
+{
+  _customplot->yAxis->setRange(_y_min, _y_max);
   
-  _chart->axY->setRange(min, max);
 }
 
 void svchart::SvChartWidget::on_bnResetChart_clicked()
 {
-  _chart->axX->setRange(0, _params.x_range);
-  _chart->m_series->clear();
-  _chartView->setCacheMode(QGraphicsView::CacheBackground);
-//  _tick = 0;   
+  for(int i = 0; i < _customplot->graphCount(); i++)
+    _customplot->graph(i)->clearData();
+  
+  _customplot->xAxis->setRange(0, spinXRange->value(), Qt::AlignLeft);
+  
+  _y_max = -1000000000;
+  _y_min =  1000000000;
+  
 }
 
 void svchart::SvChartWidget::on_bnYAutoscale_clicked(bool checked)
 {
   if(checked)
     on_bnYRangeActual_clicked();
-  
 }
 
 /** Chart **/
-svchart::Chart::Chart(ChartParams &params, QGraphicsItem *parent, Qt::WindowFlags wFlags):
-    QChart(QChart::ChartTypeCartesian, parent, wFlags),
-    m_series(0),
-    m_step(0),
-    _params(params)
-{
-  m_series = new QLineSeries(this);
+//svchart::Chart::Chart(ChartParams &params, QGraphicsItem *parent, Qt::WindowFlags wFlags):
+//    QChart(QChart::ChartTypeCartesian, parent, wFlags),
+//    m_series(0),
+//    m_step(0),
+//    _params(params)
+//{
+//  m_series = new QLineSeries(this);
 
-    QPen red(_params.line_color);
-    red.setWidth(_params.line_width);
-    m_series->setPen(red);
-    m_series->append(m_x, m_y);
+//    QPen red(_params.line_color);
+//    red.setWidth(_params.line_width);
+//    m_series->setPen(red);
+//    m_series->append(m_x, m_y);
 
-    axX = new QValueAxis;
-    axX->setRange(0, _params.x_range);
-    axX->setLabelFormat("%i");
-    axX->setTitleText("Отсчеты");
-    axX->setTickCount(_params.x_tick_count);
-    axX->applyNiceNumbers();
+//    axX = new QValueAxis;
+//    axX->setRange(0, _params.x_range);
+//    axX->setLabelFormat("%i");
+//    axX->setTitleText("Отсчеты");
+//    axX->setTickCount(_params.x_tick_count);
+//    axX->applyNiceNumbers();
     
-    axY = new QValueAxis;
-    axY->setRange(-_params.y_range, _params.y_range);
-    axY->setTitleText("");
-    axY->setTickCount(_params.y_tick_count);
+//    axY = new QValueAxis;
+//    axY->setRange(-_params.y_range, _params.y_range);
+//    axY->setTitleText("");
+//    axY->setTickCount(_params.y_tick_count);
     
-    addSeries(m_series);
+//    addSeries(m_series);
 
 
-//    createDefaultAxes();
-    setAxisX(axX, m_series);
-    setAxisY(axY, m_series);
+////    createDefaultAxes();
+//    setAxisX(axX, m_series);
+//    setAxisY(axY, m_series);
 
-//    m_axis->setTickCount(20);
-//    axX()->setRange(0, 200);
-//    axY()->setRange(-5, 5);
+////    m_axis->setTickCount(20);
+////    axX()->setRange(0, 200);
+////    axY()->setRange(-5, 5);
 
-}
+//}
 
-svchart::Chart::~Chart()
-{
+//svchart::Chart::~Chart()
+//{
 
-}
+//}
 
-bool svchart::Chart::sceneEvent(QEvent *event)
-{
-    if (event->type() == QEvent::Gesture)
-        return gestureEvent(static_cast<QGestureEvent *>(event));
-    return QChart::event(event);
-}
+//bool svchart::Chart::sceneEvent(QEvent *event)
+//{
+//    if (event->type() == QEvent::Gesture)
+//        return gestureEvent(static_cast<QGestureEvent *>(event));
+//    return QChart::event(event);
+//}
 
-bool svchart::Chart::gestureEvent(QGestureEvent *event)
-{
-    if (QGesture *gesture = event->gesture(Qt::PanGesture)) {
-        QPanGesture *pan = static_cast<QPanGesture *>(gesture);
-        QChart::scroll(-(pan->delta().x()), pan->delta().y());
-    }
+//bool svchart::Chart::gestureEvent(QGestureEvent *event)
+//{
+//    if (QGesture *gesture = event->gesture(Qt::PanGesture)) {
+//        QPanGesture *pan = static_cast<QPanGesture *>(gesture);
+//        QChart::scroll(-(pan->delta().x()), pan->delta().y());
+//    }
 
-    if (QGesture *gesture = event->gesture(Qt::PinchGesture)) {
-        QPinchGesture *pinch = static_cast<QPinchGesture *>(gesture);
-        if (pinch->changeFlags() & QPinchGesture::ScaleFactorChanged)
-            QChart::zoom(pinch->scaleFactor());
-    }
+//    if (QGesture *gesture = event->gesture(Qt::PinchGesture)) {
+//        QPinchGesture *pinch = static_cast<QPinchGesture *>(gesture);
+//        if (pinch->changeFlags() & QPinchGesture::ScaleFactorChanged)
+//            QChart::zoom(pinch->scaleFactor());
+//    }
 
-    return true;
-}
+//    return true;
+//}
