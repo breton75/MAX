@@ -26,6 +26,7 @@ QT_CHARTS_USE_NAMESPACE
 #include "libusb.h"
 #include "pull_usb.h"
 #include "sv_chartwidget.h"
+#include "sv_graphparamsdialog.h"
 
 #include "../../Common/sv_settings.h"
 
@@ -38,6 +39,27 @@ struct GraphInfo {
   QString name;
   QCPGraph *graph;
 };
+
+/** структуры заголовков для записи в файл **/
+
+#pragma pack(1)
+struct FileHeader {
+  char signature[8] = {'F', 'L', 'O', 'W', 'T', 'E', 'S', 'T'};
+  int graph_count;
+};
+#pragma pack(pop)
+
+#pragma pack(1)
+struct GraphHeader {
+  char legend[256];
+  int graph_id;
+  int line_width;
+  quint32 line_color;
+  int line_style;
+};
+#pragma pack(pop)
+
+/** ************************ **/
 
 class SvPullUsb;
 
@@ -60,13 +82,15 @@ private slots:
   
   void new_data(pullusb::fres *result);
   
-  void on_checkSaveToFile_clicked(bool checked);
+//  void on_checkSaveToFile_clicked(bool checked);
   void on_bnSaveFileSelectPath_clicked();
 
  
   void on_bnOpenFile_clicked();
   
   void on_bnAddGraph_clicked();
+  
+  void on_bnSaveToFile_clicked(bool checked);
   
 private:
   Ui::MainWindow *ui;
@@ -85,9 +109,9 @@ private:
   QMap<int, QString> _plot_types;
   
   
-  QMap<int, QCPGraph*> _graphs;
+//  QList<int> _graphList;
   
-  int _tick = 0;
+//  int _tick = 0;
 //  qreal _y_range = 1;
   
   svchart::ChartParams _chp;

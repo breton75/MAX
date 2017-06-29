@@ -59,22 +59,30 @@ QT_CHARTS_USE_NAMESPACE
 
 namespace svchart {
 
-  struct ChartParams{
+  struct ChartParams {
     int x_range = 300;
     int x_tick_count = 26;
     qreal y_range = 1.0;
-    int y_tick_count = 11;
-    int line_width = 2;
-    QColor line_color = Qt::red;
+//    int y_tick_count = 11;
     bool y_autoscale = false;
   };
   
+  struct GraphParams {
+    int line_width = 1;
+    QColor line_color = Qt::red;
+    int line_style = 1;
+    QString legend = "";
+  };
   
 //  class Chart;
   class SvChartWidget;
   
 }
 
+struct GRAPH {
+  QCPGraph* graph;
+  svchart::GraphParams params;
+};
 
 class svchart::SvChartWidget: public QWidget
 {
@@ -84,23 +92,43 @@ public:
     SvChartWidget(svchart::ChartParams &params, Qt::WindowFlags wFlags = 0, QWidget *parent = 0);
     
     QCustomPlot *customplot() { return _customplot; }
-    svchart::ChartParams params() { return _params; }
+    svchart::ChartParams chartParams() { return _params; }
     
     void setActualYRange();
     
-    void setChartYmax(qreal y) { if(y > _y_max) _y_max = y * 1.01; }
-    void setChartYmin(qreal y) { if(y < _y_min) _y_min = y * 1.01; }
+    void setMaxMinY(qreal y) { if(y > _y_max) _y_max = y * 1.01; 
+                               if(y < _y_min) _y_min = y * 1.01; }
+    
+    void addGraph(int graph_id, svchart::GraphParams &graphParams);
+    
+    void removeGraph(int graph_id);
+    
+    bool findGraph(int graph_id) { return _graphs.find(graph_id) != _graphs.end(); }
+    
+    void setGraphParams(int graph_id, svchart::GraphParams &graphParams);
+    
+    QList<int> graphList() { return _graphs.keys(); }
+    
+    int graphCount() { return _customplot->graphCount(); }
+    
+    void appendData(int graph_id, double y);
+    
+    void insertData(int graph_id, QCPData xy);
+    
+    svchart::GraphParams graphParams(int graph_id) { return _graphs.value(graph_id)->params; }
+    
+    int pointCount() { return _customplot->graph()->data()->count(); }
     
     QMutex mutex;
     
 private:
     
     QCustomPlot *_customplot;
-    
+    QMap<int, GRAPH*> _graphs;
     svchart::ChartParams _params;
     
-    qreal _y_max;
-    qreal _y_min;
+    qreal _y_max = -1000000000;
+    qreal _y_min =  1000000000;
     
     /** виджеты **/
     void setupUi();

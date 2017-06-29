@@ -231,6 +231,71 @@ void svchart::SvChartWidget::setupUi()
     QMetaObject::connectSlotsByName(this);
 } // setupUi
 
+void svchart::SvChartWidget::addGraph(int graph_id, svchart::GraphParams &graphParams)
+{
+  /* если такой график уже есть, то ничего не добавляем и выходим */
+  if(findGraph(graph_id))
+    return;
+    
+  GRAPH* g = new GRAPH;
+  g->params = graphParams;
+  g->graph = _customplot->addGraph();
+  
+  _graphs.insert(graph_id, g);
+
+  QPen pen(graphParams.line_color);
+  pen.setStyle(Qt::PenStyle(graphParams.line_style));
+  pen.setWidth(graphParams.line_width);
+    
+  _graphs.value(graph_id)->graph->setPen(pen);
+  
+}
+
+void svchart::SvChartWidget::setGraphParams(int graph_id, svchart::GraphParams &graphParams)
+{
+  QPen pen(graphParams.line_color);
+  pen.setStyle(Qt::PenStyle(graphParams.line_style));
+  pen.setWidth(graphParams.line_width);
+    
+  _graphs.value(graph_id)->graph->setPen(pen);
+  _customplot->repaint();
+}
+
+void svchart::SvChartWidget::removeGraph(int graph_id)
+{
+  /* очищаем и удаляем graph */
+  _graphs.value(graph_id)->graph->clearData();
+  _customplot->removeGraph(_graphs.value(graph_id)->graph);
+  
+  /* удаляем GRAPH */
+  delete _graphs.value(graph_id);
+  
+  /* удаляем запись о графике из map'а */
+  _graphs.remove(graph_id);
+  
+}
+
+void svchart::SvChartWidget::appendData(int graph_id, double y)
+{
+  double x = _graphs.value(graph_id)->graph->data()->count();
+  _graphs.value(graph_id)->graph->data()->insert(x, QCPData(x, y));
+  
+  setMaxMinY(y);
+  
+  if(_params.y_autoscale)
+    setActualYRange();
+}
+
+void svchart::SvChartWidget::insertData(int graph_id, QCPData xy)
+{
+  _graphs.value(graph_id)->graph->data()->insert(xy.key, xy);
+  
+  setMaxMinY(xy.value);
+  
+  if(_params.y_autoscale)
+    setActualYRange();
+}
+
 void svchart::SvChartWidget::on_bnXRangeUp_clicked()
 {
   _params.x_range *= 1.25;
@@ -275,24 +340,11 @@ void svchart::SvChartWidget::on_bnYRangeDown_clicked()
 void svchart::SvChartWidget::on_bnYRangeActual_clicked()
 {
   setActualYRange();
-  
-  //  qreal max = -1000000000;
-//  qreal min =  1000000000;
-//  for(int i = 0; i < _customplot->graphCount(); i++)
-//  {
-//    foreach (int key, _customplot->graph(i)->data()->keys()) {
-//      qreal y = _customplot->graph(i)->data()->value(key).value;
-//      if(y > max) max = y;
-//      if(y < min) min = y;
-//    }
-//  }
-  
 }
 
 void svchart::SvChartWidget::setActualYRange()
 {
   _customplot->yAxis->setRange(_y_min, _y_max);
-  
 }
 
 void svchart::SvChartWidget::on_bnResetChart_clicked()
@@ -311,71 +363,7 @@ void svchart::SvChartWidget::on_bnYAutoscale_clicked(bool checked)
 {
   if(checked)
     on_bnYRangeActual_clicked();
+  
+  _params.y_autoscale = checked;
+  
 }
-
-/** Chart **/
-//svchart::Chart::Chart(ChartParams &params, QGraphicsItem *parent, Qt::WindowFlags wFlags):
-//    QChart(QChart::ChartTypeCartesian, parent, wFlags),
-//    m_series(0),
-//    m_step(0),
-//    _params(params)
-//{
-//  m_series = new QLineSeries(this);
-
-//    QPen red(_params.line_color);
-//    red.setWidth(_params.line_width);
-//    m_series->setPen(red);
-//    m_series->append(m_x, m_y);
-
-//    axX = new QValueAxis;
-//    axX->setRange(0, _params.x_range);
-//    axX->setLabelFormat("%i");
-//    axX->setTitleText("Отсчеты");
-//    axX->setTickCount(_params.x_tick_count);
-//    axX->applyNiceNumbers();
-    
-//    axY = new QValueAxis;
-//    axY->setRange(-_params.y_range, _params.y_range);
-//    axY->setTitleText("");
-//    axY->setTickCount(_params.y_tick_count);
-    
-//    addSeries(m_series);
-
-
-////    createDefaultAxes();
-//    setAxisX(axX, m_series);
-//    setAxisY(axY, m_series);
-
-////    m_axis->setTickCount(20);
-////    axX()->setRange(0, 200);
-////    axY()->setRange(-5, 5);
-
-//}
-
-//svchart::Chart::~Chart()
-//{
-
-//}
-
-//bool svchart::Chart::sceneEvent(QEvent *event)
-//{
-//    if (event->type() == QEvent::Gesture)
-//        return gestureEvent(static_cast<QGestureEvent *>(event));
-//    return QChart::event(event);
-//}
-
-//bool svchart::Chart::gestureEvent(QGestureEvent *event)
-//{
-//    if (QGesture *gesture = event->gesture(Qt::PanGesture)) {
-//        QPanGesture *pan = static_cast<QPanGesture *>(gesture);
-//        QChart::scroll(-(pan->delta().x()), pan->delta().y());
-//    }
-
-//    if (QGesture *gesture = event->gesture(Qt::PinchGesture)) {
-//        QPinchGesture *pinch = static_cast<QPinchGesture *>(gesture);
-//        if (pinch->changeFlags() & QPinchGesture::ScaleFactorChanged)
-//            QChart::zoom(pinch->scaleFactor());
-//    }
-
-//    return true;
-//}

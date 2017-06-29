@@ -14,15 +14,7 @@ MainWindow::MainWindow(QWidget *parent) :
   /* заполняем список устройств */
   on_bnGetDeviceList_clicked();
   
-  /* режимы отображения */
-  _plot_types = {{0, "Скорость м/с."},
-                 {1, "TOF diff нс."},
-                 {2, "(t1 + t2) / 2"}};
-
-  foreach (int key, _plot_types.keys()) {
-    ui->cbViewType->addItem(_plot_types.value(key), QVariant(key));
-  }
-  
+ 
 //  ui->cbViewType->addItem("Скорость м/с.");
 //  ui->cbViewType->addItem("TOF diff нс.");
 //  ui->cbViewType->addItem("(t1 + t2) / 2");
@@ -30,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent) :
   /* читаем параметры программы */
   ui->spinTimer->setValue(AppParams::readParam(this, "General", "RequestTimer", 500).toInt());
   ui->checkLog->setChecked(AppParams::readParam(this, "General", "Log", true).toBool());
-  ui->cbViewType->setCurrentIndex(ui->cbViewType->findData(AppParams::readParam(this, "Chart", "ViewType", 0)));
+//  ui->cbViewType->setCurrentIndex(ui->cbViewType->findData(AppParams::readParam(this, "Chart", "ViewType", 0)));
   ui->cbDevices->setCurrentIndex(ui->cbDevices->findText(AppParams::readParam(this, "General", "LastDeviceName", "").toString()));
 //  ui->checkShowTOF->setChecked(AppParams::readParam(this, "Chart", "ShowTOF", false).toBool());
   ui->editSaveFileNameTemplate->setText(AppParams::readParam(this, "General", "SaveFileNameTemplate", "").toString());
@@ -40,14 +32,15 @@ MainWindow::MainWindow(QWidget *parent) :
   _chp.x_tick_count = AppParams::readParam(this, "Chart", "x_tick_count", 26).toInt();
   _chp.y_autoscale = AppParams::readParam(this, "Chart", "y_autoscale", false).toBool();
   _chp.y_range = AppParams::readParam(this, "Chart", "y_range", 5).toInt();
-  _chp.y_tick_count = AppParams::readParam(this, "Chart", "y_tick_count", 11).toInt();
-  _chp.line_color = QColor(AppParams::readParam(this, "Chart", "line_color", 0xFFFF0000).toUInt());
-  _chp.line_width = AppParams::readParam(this, "Chart", "line_width", 2).toInt();
+//  _chp.y_tick_count = AppParams::readParam(this, "Chart", "y_tick_count", 11).toInt();
+//  _chp.line_color = QColor(AppParams::readParam(this, "Chart", "line_color", 0xFFFF0000).toUInt());
+//  _chp.line_width = AppParams::readParam(this, "Chart", "line_width", 2).toInt();
 //  _chp.show_TOF = ui->checkShowTOF->isChecked();
 
   _chart_w = new svchart::SvChartWidget(_chp);
-  _chart_w->setParent(this);
-  ui->horizontalLayout_2->addWidget(_chart_w);
+  _chart_w->setParent(0);
+  _chart_w->show();
+//  ui->horizontalLayout_2->addWidget(_chart_w);
   
   
 //  _chart = new svchart::Chart(_chp); 
@@ -62,12 +55,18 @@ MainWindow::MainWindow(QWidget *parent) :
 //  chartView->setRubberBand(QChartView::RectangleRubberBand);
 //  ui->verticalLayout_2->addWidget(chartView);
   
-  /* параметры окна */
+  /* параметры главного окна */
   AppParams::WindowParams p = AppParams::readWindowParams(this);
   this->resize(p.size);
   this->move(p.position);
   this->setWindowState(p.state);
     
+  /* параметры окна графиков */
+  AppParams::WindowParams gw = AppParams::readWindowParams(this, "GRAPH WINDOW");
+  _chart_w->resize(gw.size);
+  _chart_w->move(gw.position);
+  _chart_w->setWindowState(gw.state);
+  
 }
 
 MainWindow::~MainWindow()
@@ -88,14 +87,15 @@ MainWindow::~MainWindow()
   
   /* сохраняем парметры программы */
   AppParams::saveWindowParams(this, this->size(), this->pos(), this->windowState());
+  AppParams::saveWindowParams(_chart_w, _chart_w->size(), _chart_w->pos(), _chart_w->windowState(), "GRAPH WINDOW");
   AppParams::saveParam(this, "General", "RequestTimer", ui->spinTimer->value());
   AppParams::saveParam(this, "General", "Log", ui->checkLog->isChecked());
   AppParams::saveParam(this, "General", "LastDeviceName", ui->cbDevices->currentText());
   AppParams::saveParam(this, "General", "SaveFileNameTemplate", ui->editSaveFileNameTemplate->text());
   AppParams::saveParam(this, "General", "SaveFilePath", ui->editSaveFilePath->text());
-  AppParams::saveParam(this, "Chart", "ViewType", ui->cbViewType->currentIndex());
-  AppParams::saveParam(this, "Chart", "Autoscale", _chart_w->params().y_autoscale);
-  AppParams::saveParam(this, "Chart", "x_range", _chart_w->params().x_range);
+//  AppParams::saveParam(this, "Chart", "ViewType", ui->cbViewType->currentIndex());
+  AppParams::saveParam(this, "Chart", "Autoscale", _chart_w->chartParams().y_autoscale);
+  AppParams::saveParam(this, "Chart", "x_range", _chart_w->chartParams().x_range);
 //  AppParams::saveParam(this, "Chart", "ShowTOF", ui->checkShowTOF->isChecked());
 
   delete ui;
@@ -198,15 +198,13 @@ void MainWindow::on_bnCycle_clicked()
     ui->bnCycle->setText("Stop");
     ui->bnCycle->setEnabled(true);
     
-//    tm.setSingleShot(true);
-//    tm.connect(&tm, SIGNAL(timeout()), this, SLOT(tmTimeout()));
+    ui->bnSaveToFile->setEnabled(true);
+    
     
     _thr = new SvPullUsb(handle, ui->spinTimer->value());
     connect(_thr, SIGNAL(new_data(pullusb::fres*/*, pullusb::MAX35101EV_ANSWER**/)), this, SLOT(new_data(pullusb::fres*/*, pullusb::MAX35101EV_ANSWER**/)));
-//    _timerId = _thr->startTimer(200);
     _thr->start();
 
-    //    tm.start(1000);
   }
   else
   {
@@ -223,6 +221,10 @@ void MainWindow::on_bnCycle_clicked()
       
       ui->bnCycle->setText("Start");
       ui->bnCycle->setEnabled(true);
+      
+      on_bnSaveToFile_clicked(false);
+//      ui->bnSaveToFile->setChecked(false);
+      ui->bnSaveToFile->setEnabled(false);
   }
  
 }
@@ -245,66 +247,45 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
     qreal Vpot = 3*Vsnd * (TOFdiff / (t1 + t2)); // определяем скорость потока, м/с.
     qreal tAvg = (t1 + t2) / 2;
 
-    QMap<int, qreal> curValues;
-    curValues.clear();
-    int tick;
+    qreal val;
     
-    foreach (int key, _graphs.keys()) {
+    for(int i = 0; i < _chart_w->graphList().count(); i++) {
       
-      qreal val;
-      switch (key) {
-      case 0:
+      int graph_id = _chart_w->graphList()[i];
+      
+      switch (graph_id) {
+        case 0:
           val = Vpot;
-//          curValues.insert(key, Vpot);
           break;
-      case 1:
+          
+        case 1:
           val = TOFdiff;
-//          curValues.insert(key, TOFdiff);
           break;
-      default:
+          
+        case 2:
           val = tAvg;
-//          curValues.insert(key, tAvg);
           break;
+          
+        default:
+          val = Vsnd;
+          
       }
       
-      tick = _graphs.value(key)->data()->count();
-      _graphs.value(key)->data()->insert(double(tick), QCPData(double(tick), val));
-      _chart_w->setChartYmax(val);
-      _chart_w->setChartYmin(val);
+      _chart_w->appendData(graph_id, val);
       
-//      _graphs.value(key)->data()->insert(double(tick), QCPData(double(tick), curValues.value(key)));
+      if(_file)
+          _file->write((const char*)&val, sizeof(qreal));
       
     }
-    
-//    _chart_w->customplot()->replot();
-    
-    
-    if(_file && ui->cbViewType_2->currentData().isValid()) {
-      qreal v = curValues.value(ui->cbViewType_2->currentData().toInt());
-        _file->write((const char*)&v, sizeof(qreal));
-    }
+        
+    _chart_w->customplot()->replot();
 
     if(ui->checkLog->isChecked())
       ui->textLog->append(QString("%1%2\tHit Up Avg: %3\tHit Down Avg: %4\tTOF diff: %5\tVpot: %6\tVsnd: %7")
-                          .arg(tick)
+                          .arg(_chart_w->pointCount())
                           .arg(QTime::currentTime().toString("mm:ss.zzz"))
                           .arg(t1).arg(t2).arg(TOFdiff, 0, 'f', 6).arg(Vpot, 0, 'f', 3).arg(Vsnd, 0, 'f', 4));
-    
-    if(_chart_w->params().y_autoscale) {
-      _chart_w->setActualYRange();
-    }
-    _chart_w->customplot()->replot();
       
-//    {
-////      (qAbs<qreal>(val) > qAbs<qreal>(_chp.y_range)))
-//      qreal y1 = qAbs<qreal>(val) - 1.1;
-//      qreal y2 = qAbs<qreal>(val) + 1.1;
-//      _chart_w->chart()->axisY()->setRange(y1, y2);
-////      _chp.y_range = qAbs<qreal>(val) * 1.1;
-////      _chart->axisY()->setRange(-_chp.y_range, _chp.y_range);
-//      _chart_w->chart()->update();
-//    }
-    
     MUTEX1.unlock();
     
   }
@@ -376,9 +357,11 @@ void SvPullUsb::stop()
 
 /** ****************************************** **/
 
-void MainWindow::on_checkSaveToFile_clicked(bool checked)
+void MainWindow::on_bnSaveToFile_clicked(bool checked)
 {
     if(checked) {
+        ui->bnSaveToFile->setText("Stop saving");
+      
         QDateTime dt = QDateTime::currentDateTime();
         QString fn = ui->editSaveFileNameTemplate->text();
         QString path = ui->editSaveFilePath->text();
@@ -387,29 +370,58 @@ void MainWindow::on_checkSaveToFile_clicked(bool checked)
         QString folder = svfnt::get_folder_name(dt, ext, path);
         if(folder.isEmpty()) {
             QMessageBox::critical(0, "Error", "Неверный путь для сохранения", QMessageBox::Ok);
-            ui->checkSaveToFile->setChecked(false);
+            ui->bnSaveToFile->setChecked(false);
             return;
         }
 
         QString s = folder + svfnt::replace_re(dt, ext, fn) + "." + ext;
-        qDebug() << s;
 
         MUTEX1.lock();
 
         _file = new QFile(s);
         bool b = _file->open(QIODevice::WriteOnly);
-
+        
+        /* если не удалось создать файл, то сначала запоминаем сообщение об ошибке,
+         *  удаляем указатели  и разлочиваем мьютекс, чтобы продолжался опрос устройства */
         if(!b) {
             s = _file->errorString();
             delete _file;
             _file = nullptr;
         }
+        /* если файл создан, то пишем в него заголовок и данные графиков */
+        else {
+          FileHeader file_head;
+          file_head.graph_count = _chart_w->graphCount();
+          _file->write((const char*)&file_head, sizeof(FileHeader));
+          
+          for(int i = 0; i < _chart_w->graphList().count(); i++) {
+            
+            int graph_id = _chart_w->graphList()[i];
+            
+            GraphHeader graph_head;
+            graph_head.graph_id = graph_id;
+            
+//            memset(&(graph_head.legend), 0, sizeof(GraphHeader::legend));
+//            QString lgnd = _chart_w->graphParams(graph_id).legend;
+//            lgnd.truncate(sizeof(GraphHeader::legend) - 1);
+//            strcpy(&(graph_head.legend[0]), lgnd.toStdString().c_str());
+            
+            graph_head.line_color = quint32(_chart_w->graphParams(graph_id).line_color.rgb());
+            graph_head.line_style = _chart_w->graphParams(graph_id).line_style;
+            graph_head.line_width = _chart_w->graphParams(graph_id).line_width;
+            
+            _file->write((const char*)&graph_head, sizeof(GraphHeader));
+            
+          }
+        }
 
         MUTEX1.unlock();
 
+        /* затем выводим сообщение об ошибке и выходим */
         if(!b) {
             QMessageBox::critical(0, "Error", s, QMessageBox::Ok);
-            ui->checkSaveToFile->setChecked(false);
+            ui->bnSaveToFile->setChecked(false);
+//            return;
         }
 
     }
@@ -421,7 +433,9 @@ void MainWindow::on_checkSaveToFile_clicked(bool checked)
         delete _file;
         _file = nullptr;
         MUTEX1.unlock();
-
+        
+        ui->bnSaveToFile->setChecked(false);
+        ui->bnSaveToFile->setText("Save to file");
     }
 }
 
@@ -453,7 +467,7 @@ void MainWindow::on_bnOpenFile_clicked()
   }
   
   int t = 0;
-  svchart::ChartParams p = _chart_w->params();
+  svchart::ChartParams p = _chart_w->chartParams();
   svchart::SvChartWidget *chart = new svchart::SvChartWidget(p);
   
   qreal val;
@@ -474,15 +488,25 @@ void MainWindow::on_bnOpenFile_clicked()
 
 void MainWindow::on_bnAddGraph_clicked()
 {
-  int key = ui->cbViewType->currentData().toInt();
+  SvGraphParamsDialog* chDlg = new SvGraphParamsDialog();
+  chDlg->setModal(true);
+  chDlg->show();
   
-  /* если такой график уже есть, то ничего не добавляем и выходим */
-  if(_graphs.find(key) != _graphs.end())
-    return;
+  if(chDlg->result() == QDialog::Accepted)
+  {
+    qDebug() << "ok";
+  }
   
-  _graphs.insert(key, _chart_w->customplot()->addGraph());
+//  int graph_id = ui->cbViewType->currentData().toInt();
   
-  ui->cbViewType_2->addItem(ui->cbViewType->currentText(), ui->cbViewType->currentData());
-  ui->cbViewType_2->setCurrentIndex(ui->cbViewType_2->findData(key));
+//  /* если такой график уже есть, то ничего не добавляем и выходим */
+//  if(_chart_w->findGraph(graph_id))
+//    return;
+  
+//  svchart::GraphParams gp;
+  
+//  _chart_w->addGraph(graph_id, gp);
   
 }
+
+

@@ -29,22 +29,22 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     pull_usb.cpp \
     ../../Common/sv_settings.cpp \
-    sv_chartsettingsdialog.cpp \
     sv_chartwidget.cpp \
-    ../../Common/qcustomplot/qcustomplot.cpp
+    ../../Common/qcustomplot/qcustomplot.cpp \
+    sv_graphparamsdialog.cpp
 
 
 HEADERS  += mainwindow.h \
     ../../libusb-1.0.21/include/libusb-1.0/libusb.h \
     pull_usb.h \
-    sv_chartsettingsdialog.h \
     ../../Common/sv_settings.h \
     ../../Common/sv_fnt.h \
     sv_chartwidget.h \
-    ../../Common/qcustomplot/qcustomplot.h
+    ../../Common/qcustomplot/qcustomplot.h \
+    sv_graphparamsdialog.h
 
 FORMS    += mainwindow.ui \
-    sv_chartsettingsdialog.ui
+    sv_graphparamsdialog.ui
 
 win32: LIBS += -L$$PWD/../../libusb-1.0.21/MinGW32/dll/ -llibusb-1.0
 
