@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>263</width>
-    <height>300</height>
+    <height>233</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -93,7 +93,11 @@
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="cbLineColor"/>
+         <widget class="QComboBox" name="cbLineColor">
+          <property name="frame">
+           <bool>true</bool>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -128,7 +132,14 @@
          </widget>
         </item>
         <item>
-         <widget class="QSpinBox" name="spinLineWidth"/>
+         <widget class="QSpinBox" name="spinLineWidth">
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>10</number>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
@@ -171,6 +182,9 @@
        <layout class="QHBoxLayout" name="horizontalLayout_5">
         <item>
          <widget class="QLabel" name="labelLegendText">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
             <horstretch>0</horstretch>
@@ -198,16 +212,13 @@
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="editLegendText"/>
+         <widget class="QLineEdit" name="editLegendText">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+         </widget>
         </item>
        </layout>
-      </item>
-      <item>
-       <widget class="QPushButton" name="bnAddGraph">
-        <property name="text">
-         <string>Add graph</string>
-        </property>
-       </widget>
       </item>
      </layout>
     </widget>

@@ -28,18 +28,10 @@
 ****************************************************************************/
 
 #include "sv_chartwidget.h"
-#include <QtCharts/QAbstractAxis>
-#include <QtCharts/QSplineSeries>
-#include <QtCharts/QValueAxis>
-#include <QtCore/QTime>
-#include <QtCore/QDebug>
-#include <QtWidgets/QGesture>
 
-
-svchart::SvChartWidget::SvChartWidget(ChartParams &params, Qt::WindowFlags wFlags, QWidget *parent)
+svchart::SvChartWidget::SvChartWidget(ChartParams &params, QWidget *parent)
 {
   this->setParent(parent);
-  this->setWindowFlags(wFlags);
   
   _params = params;
   
@@ -220,7 +212,8 @@ void svchart::SvChartWidget::setupUi()
 //    _customplot->axisRect()->setupFullAxesBox(true);
 //    _customplot->yAxis->setScaleType(QCPAxis::stLogarithmic);
     _customplot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
-    
+    _customplot->legend->setVisible(true);
+        
     hlay2->addWidget(_customplot);
     
     vlayMain->addLayout(hlay2);
@@ -231,13 +224,13 @@ void svchart::SvChartWidget::setupUi()
     QMetaObject::connectSlotsByName(this);
 } // setupUi
 
-void svchart::SvChartWidget::addGraph(int graph_id, svchart::GraphParams &graphParams)
+void svchart::SvChartWidget::addGraph(int graph_id, svgraph::GraphParams &graphParams)
 {
   /* если такой график уже есть, то ничего не добавляем и выходим */
   if(findGraph(graph_id))
     return;
     
-  GRAPH* g = new GRAPH;
+  svchart::GRAPH* g = new svchart::GRAPH;
   g->params = graphParams;
   g->graph = _customplot->addGraph();
   
@@ -248,17 +241,22 @@ void svchart::SvChartWidget::addGraph(int graph_id, svchart::GraphParams &graphP
   pen.setWidth(graphParams.line_width);
     
   _graphs.value(graph_id)->graph->setPen(pen);
+  _graphs.value(graph_id)->graph->setName(svgraph::GraphTypes.value(graph_id));
   
 }
 
-void svchart::SvChartWidget::setGraphParams(int graph_id, svchart::GraphParams &graphParams)
+void svchart::SvChartWidget::setGraphParams(int graph_id, svgraph::GraphParams &graphParams)
 {
+  _graphs.value(graph_id)->params = graphParams;
+  
   QPen pen(graphParams.line_color);
   pen.setStyle(Qt::PenStyle(graphParams.line_style));
   pen.setWidth(graphParams.line_width);
     
   _graphs.value(graph_id)->graph->setPen(pen);
+  
   _customplot->repaint();
+  
 }
 
 void svchart::SvChartWidget::removeGraph(int graph_id)
@@ -272,6 +270,8 @@ void svchart::SvChartWidget::removeGraph(int graph_id)
   
   /* удаляем запись о графике из map'а */
   _graphs.remove(graph_id);
+  
+  _customplot->replot();
   
 }
 
@@ -345,6 +345,7 @@ void svchart::SvChartWidget::on_bnYRangeActual_clicked()
 void svchart::SvChartWidget::setActualYRange()
 {
   _customplot->yAxis->setRange(_y_min, _y_max);
+  _customplot->replot(QCustomPlot::rpQueued);
 }
 
 void svchart::SvChartWidget::on_bnResetChart_clicked()
@@ -356,6 +357,8 @@ void svchart::SvChartWidget::on_bnResetChart_clicked()
   
   _y_max = -1000000000;
   _y_min =  1000000000;
+  
+  _customplot->replot();
   
 }
 

@@ -30,8 +30,6 @@
 #ifndef SV_CHARTWIDGET_H
 #define SV_CHARTWIDGET_H
 
-#include <QtCharts/QChart>
-#include <QtCharts/QChartView>
 #include <QtCore/QTimer>
 #include <QWidget>
 #include <QMutex>
@@ -41,21 +39,13 @@
 #include <QPushButton>
 #include <QFrame>
 #include <QSpinBox>
+#include <QtCore/QTime>
+#include <QtCore/QDebug>
 
 #include "qcustomplot.h"
 
-QT_CHARTS_BEGIN_NAMESPACE
-class QSplineSeries;
-class QLineSeries;
-class QValueAxis;
-QT_CHARTS_END_NAMESPACE
+#include "sv_graph.h"
 
-
-QT_BEGIN_NAMESPACE
-class QGestureEvent;
-QT_END_NAMESPACE
-
-QT_CHARTS_USE_NAMESPACE
 
 namespace svchart {
 
@@ -66,30 +56,24 @@ namespace svchart {
 //    int y_tick_count = 11;
     bool y_autoscale = false;
   };
-  
-  struct GraphParams {
-    int line_width = 1;
-    QColor line_color = Qt::red;
-    int line_style = 1;
-    QString legend = "";
+
+  struct GRAPH {
+    QCPGraph* graph;
+    svgraph::GraphParams params;
   };
   
-//  class Chart;
   class SvChartWidget;
   
 }
 
-struct GRAPH {
-  QCPGraph* graph;
-  svchart::GraphParams params;
-};
 
 class svchart::SvChartWidget: public QWidget
 {
     Q_OBJECT
 
 public:
-    SvChartWidget(svchart::ChartParams &params, Qt::WindowFlags wFlags = 0, QWidget *parent = 0);
+    SvChartWidget(svchart::ChartParams &params, QWidget *parent = 0);
+    ~SvChartWidget() { close(); deleteLater(); }
     
     QCustomPlot *customplot() { return _customplot; }
     svchart::ChartParams chartParams() { return _params; }
@@ -99,13 +83,13 @@ public:
     void setMaxMinY(qreal y) { if(y > _y_max) _y_max = y * 1.01; 
                                if(y < _y_min) _y_min = y * 1.01; }
     
-    void addGraph(int graph_id, svchart::GraphParams &graphParams);
+    void addGraph(int graph_id, svgraph::GraphParams &graphParams);
     
     void removeGraph(int graph_id);
     
     bool findGraph(int graph_id) { return _graphs.find(graph_id) != _graphs.end(); }
     
-    void setGraphParams(int graph_id, svchart::GraphParams &graphParams);
+    void setGraphParams(int graph_id, svgraph::GraphParams &graphParams);
     
     QList<int> graphList() { return _graphs.keys(); }
     
@@ -115,7 +99,7 @@ public:
     
     void insertData(int graph_id, QCPData xy);
     
-    svchart::GraphParams graphParams(int graph_id) { return _graphs.value(graph_id)->params; }
+    svgraph::GraphParams graphParams(int graph_id) { return _graphs.value(graph_id)->params; }
     
     int pointCount() { return _customplot->graph()->data()->count(); }
     
@@ -124,7 +108,7 @@ public:
 private:
     
     QCustomPlot *_customplot;
-    QMap<int, GRAPH*> _graphs;
+    QMap<int, svchart::GRAPH*> _graphs;
     svchart::ChartParams _params;
     
     qreal _y_max = -1000000000;

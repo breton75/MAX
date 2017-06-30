@@ -31,7 +31,7 @@ SOURCES += main.cpp\
     ../../Common/sv_settings.cpp \
     sv_chartwidget.cpp \
     ../../Common/qcustomplot/qcustomplot.cpp \
-    sv_graphparamsdialog.cpp
+    sv_graph.cpp
 
 
 HEADERS  += mainwindow.h \
@@ -41,7 +41,7 @@ HEADERS  += mainwindow.h \
     ../../Common/sv_fnt.h \
     sv_chartwidget.h \
     ../../Common/qcustomplot/qcustomplot.h \
-    sv_graphparamsdialog.h
+    sv_graph.h
 
 FORMS    += mainwindow.ui \
     sv_graphparamsdialog.ui

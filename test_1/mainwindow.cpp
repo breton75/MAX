@@ -37,23 +37,10 @@ MainWindow::MainWindow(QWidget *parent) :
 //  _chp.line_width = AppParams::readParam(this, "Chart", "line_width", 2).toInt();
 //  _chp.show_TOF = ui->checkShowTOF->isChecked();
 
-  _chart_w = new svchart::SvChartWidget(_chp);
-  _chart_w->setParent(0);
-  _chart_w->show();
-//  ui->horizontalLayout_2->addWidget(_chart_w);
+  _chart_w = new svchart::SvChartWidget(_chp, ui->dockPlot);
+  ui->verticalLayout_7->addWidget(_chart_w);
+//  _chart_w->show();
   
-  
-//  _chart = new svchart::Chart(_chp); 
-//  _chart->legend()->hide();
-//  _chart->setAnimationOptions(QChart::NoAnimation);
-  
-//  chartView = new QChartView(_chart);
-//  chartView->setRenderHint(QPainter::Antialiasing);
-//  chartView->setParent(this);
-////  chartView->setGeometry(0,0,1200, 800);
-//  chartView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-//  chartView->setRubberBand(QChartView::RectangleRubberBand);
-//  ui->verticalLayout_2->addWidget(chartView);
   
   /* параметры главного окна */
   AppParams::WindowParams p = AppParams::readWindowParams(this);
@@ -62,10 +49,30 @@ MainWindow::MainWindow(QWidget *parent) :
   this->setWindowState(p.state);
     
   /* параметры окна графиков */
-  AppParams::WindowParams gw = AppParams::readWindowParams(this, "GRAPH WINDOW");
-  _chart_w->resize(gw.size);
-  _chart_w->move(gw.position);
-  _chart_w->setWindowState(gw.state);
+  AppParams::WindowParams gw = AppParams::readWindowParams(this, "PLOT WINDOW");
+  ui->dockPlot->resize(gw.size);
+  ui->dockPlot->move(gw.position);
+  ui->dockPlot->setWindowState(gw.state);
+  
+  /* читаем информацию о графиках */
+  int gcnt = AppParams::readParam(this, "Chart", "GraphCount", 0).toInt();
+  
+  for(int i = 0; i < gcnt; i++) {
+    svgraph::GraphParams p;
+    
+    p.type = AppParams::readParam(this, QString("Graph_%1").arg(i), "TypeID", 0).toInt();
+    p.line_color = QColor(AppParams::readParam(this, QString("Graph_%1").arg(i), "LineColor", "red").toString());
+    p.line_style = AppParams::readParam(this, QString("Graph_%1").arg(i), "LineStyle", static_cast<int>(Qt::SolidLine)).toInt();
+    p.line_width = AppParams::readParam(this, QString("Graph_%1").arg(i), "LineWidth", 1).toInt();
+    p.legend = AppParams::readParam(this, QString("Graph_%1").arg(i), "LineLegend", "").toString();
+
+    _chart_w->addGraph(p.type, p);
+    _addGraphToList(p.type, p);
+    
+  }
+  
+  if(ui->listGraphs->count() > 0)
+    ui->listGraphs->setCurrentRow(0);
   
 }
 
@@ -87,7 +94,7 @@ MainWindow::~MainWindow()
   
   /* сохраняем парметры программы */
   AppParams::saveWindowParams(this, this->size(), this->pos(), this->windowState());
-  AppParams::saveWindowParams(_chart_w, _chart_w->size(), _chart_w->pos(), _chart_w->windowState(), "GRAPH WINDOW");
+  AppParams::saveWindowParams(ui->dockPlot, ui->dockPlot->size(), ui->dockPlot->pos(), ui->dockPlot->windowState(), "PLOT WINDOW");
   AppParams::saveParam(this, "General", "RequestTimer", ui->spinTimer->value());
   AppParams::saveParam(this, "General", "Log", ui->checkLog->isChecked());
   AppParams::saveParam(this, "General", "LastDeviceName", ui->cbDevices->currentText());
@@ -97,8 +104,21 @@ MainWindow::~MainWindow()
   AppParams::saveParam(this, "Chart", "Autoscale", _chart_w->chartParams().y_autoscale);
   AppParams::saveParam(this, "Chart", "x_range", _chart_w->chartParams().x_range);
 //  AppParams::saveParam(this, "Chart", "ShowTOF", ui->checkShowTOF->isChecked());
-
+  
+  /* сохраняем список графиков */
+  AppParams::saveParam(this, "Chart", "GraphCount", _chart_w->graphCount());
+  
+  for (int i = 0; i < _chart_w->graphList().count(); i++) {
+    int graph_id = _chart_w->graphList()[i];
+    AppParams::saveParam(this, QString("Graph_%1").arg(i), "TypeID", graph_id);
+    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineColor", _chart_w->graphParams(graph_id).line_color.name());
+    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineStyle", _chart_w->graphParams(graph_id).line_style);
+    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineWidth", _chart_w->graphParams(graph_id).line_width);
+    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineLegend", _chart_w->graphParams(graph_id).legend);
+  }
+  
   delete ui;
+  
 }
 
 void MainWindow::on_bnGetDeviceList_clicked()
@@ -177,7 +197,15 @@ void MainWindow::on_bnOneShot_clicked()
 
 void MainWindow::on_bnCycle_clicked()
 {
+  if(ui->listGraphs->count() == 0) {
+    QMessageBox::information(this, "Info", "Необходимо добавить хотя бы один график");
+    on_bnAddGraph_clicked();
+    return;
+  }
+  
   ui->bnCycle->setEnabled(false);
+  ui->bnOneShot->setEnabled(false);
+  ui->frame->setEnabled(false);
   QApplication::processEvents();
   
   if(!_thr)
@@ -197,6 +225,7 @@ void MainWindow::on_bnCycle_clicked()
     
     ui->bnCycle->setText("Stop");
     ui->bnCycle->setEnabled(true);
+    ui->bnCycle->setStyleSheet("background-color: tomato");
     
     ui->bnSaveToFile->setEnabled(true);
     
@@ -221,9 +250,11 @@ void MainWindow::on_bnCycle_clicked()
       
       ui->bnCycle->setText("Start");
       ui->bnCycle->setEnabled(true);
+      ui->bnCycle->setStyleSheet("");
+      ui->bnOneShot->setEnabled(true);
+      ui->frame->setEnabled(true);
       
       on_bnSaveToFile_clicked(false);
-//      ui->bnSaveToFile->setChecked(false);
       ui->bnSaveToFile->setEnabled(false);
   }
  
@@ -298,28 +329,8 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
   
 }
 
-void MainWindow::on_cbViewType_currentIndexChanged(int index)
-{
-  Q_UNUSED(index);
-  
-  if(!_chart_w) return;
-  
-//  _chart_w->chart()->scroll(-_tick, 0);
-//  _chart_w->chart()->m_series->clear();
-//  _tick = 0;
-}
-
 
 /** ******************************* **/
-//void SvPullUsb::timerEvent(QTimerEvent *te)
-//{
-//  MUTEX1.lock();
-//  pullusb::fres *result = pullusb::request(_handle, max_data);
-//  MUTEX1.unlock();
-
-//  emit new_data(result, &max_data);
-  
-//}
 
 SvPullUsb::~SvPullUsb()
 { 
@@ -361,20 +372,20 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
 {
     if(checked) {
         ui->bnSaveToFile->setText("Stop saving");
+        ui->bnSaveToFile->setStyleSheet("background-color: tomato");
       
         QDateTime dt = QDateTime::currentDateTime();
         QString fn = ui->editSaveFileNameTemplate->text();
         QString path = ui->editSaveFilePath->text();
-        QString ext = "dat";
 
-        QString folder = svfnt::get_folder_name(dt, ext, path);
+        QString folder = svfnt::get_folder_name(dt, FILE_EXT, path);
         if(folder.isEmpty()) {
             QMessageBox::critical(0, "Error", "Неверный путь для сохранения", QMessageBox::Ok);
             ui->bnSaveToFile->setChecked(false);
             return;
         }
 
-        QString s = folder + svfnt::replace_re(dt, ext, fn) + "." + ext;
+        QString s = folder + svfnt::replace_re(dt, FILE_EXT, fn) + "." + FILE_EXT;
 
         MUTEX1.lock();
 
@@ -390,23 +401,21 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
         }
         /* если файл создан, то пишем в него заголовок и данные графиков */
         else {
+          /* заголовок файла - сигнатура и кол-во графиков */
           FileHeader file_head;
+          
           file_head.graph_count = _chart_w->graphCount();
           _file->write((const char*)&file_head, sizeof(FileHeader));
           
+          /* параметры графиков */
           for(int i = 0; i < _chart_w->graphList().count(); i++) {
             
             int graph_id = _chart_w->graphList()[i];
             
             GraphHeader graph_head;
             graph_head.graph_id = graph_id;
-            
-//            memset(&(graph_head.legend), 0, sizeof(GraphHeader::legend));
-//            QString lgnd = _chart_w->graphParams(graph_id).legend;
-//            lgnd.truncate(sizeof(GraphHeader::legend) - 1);
-//            strcpy(&(graph_head.legend[0]), lgnd.toStdString().c_str());
-            
-            graph_head.line_color = quint32(_chart_w->graphParams(graph_id).line_color.rgb());
+           
+            graph_head.line_color = static_cast<quint32>(_chart_w->graphParams(graph_id).line_color.rgb());
             graph_head.line_style = _chart_w->graphParams(graph_id).line_style;
             graph_head.line_width = _chart_w->graphParams(graph_id).line_width;
             
@@ -436,6 +445,8 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
         
         ui->bnSaveToFile->setChecked(false);
         ui->bnSaveToFile->setText("Save to file");
+        ui->bnSaveToFile->setStyleSheet("");
+        
     }
 }
 
@@ -450,13 +461,12 @@ void MainWindow::on_bnOpenFile_clicked()
 {
   QDateTime dt = QDateTime::currentDateTime();
   QString dirpath = ui->editSaveFilePath->text();
-  QString ext = "dat";
   
-  QDir dir(svfnt::get_folder_name(dt, ext, dirpath));
+  QDir dir(svfnt::get_folder_name(dt, FILE_EXT, dirpath));
   if(!dir.exists())
     dir.setPath(QDir::currentPath());
   
-  QString fn = QFileDialog::getOpenFileName(this, tr("Открыть файл"), dir.path(), "dat file (*.dat);;all files (*.*)");
+  QString fn = QFileDialog::getOpenFileName(this, tr("Открыть файл"), dir.path(), "frs file (*.frs);;all files (*.*)");
   
   if(fn.isEmpty()) return;
   
@@ -466,47 +476,134 @@ void MainWindow::on_bnOpenFile_clicked()
     return;
   }
   
-  int t = 0;
+  QByteArray b = f.read(15);
+//  if(b != FileHeader.signature) {
+//    f.close();
+//    return;
+//  }
+  
+  /* создаем окно для вывода графиков */
   svchart::ChartParams p = _chart_w->chartParams();
   svchart::SvChartWidget *chart = new svchart::SvChartWidget(p);
   
-  qreal val;
-  QCPGraph *graph = _chart_w->customplot()->addGraph();
-  while(!f.atEnd()) {
-    f.read((char*)(&val), sizeof(qreal));
+  /* читаем количество графиков */
+  int graph_cnt;
+  f.read((char*)&graph_cnt, sizeof(int));
+  
+//  qDebug() << 
+  /* добавляем графики */
+  QList<int> graph_ids;
+  for(int i = 0; i < graph_cnt; i++) {
+    GraphHeader grah_head;
+    f.read((char*)&grah_head, sizeof(GraphHeader));
     
-    graph->data()->insert(t, QCPData(double(t), val));
-//    chart->chart()->m_series->append(qreal(t++), val);
-    t++;
+    svgraph::GraphParams graph_params;
+    graph_params.type = grah_head.graph_id;
+    graph_params.line_color = QColor::fromRgb(static_cast<QRgb>(grah_head.line_color));
+    graph_params.line_style = grah_head.line_style;
+    graph_params.line_width = grah_head.line_width;
+    
+    chart->addGraph(graph_params.type, graph_params);
+    
+    graph_ids.append(graph_params.type);
+  }
+  
+  /* начинаем читать данные графиков */
+  int i = 0;
+  while(!f.atEnd()) {
+    qreal y;
+   
+    f.read((char*)&y, sizeof(qreal));
+    
+    chart->appendData(graph_ids[i++], y);
+    
+    i = i == graph_ids.count() ? 0 : i;
+    
   }
   
   f.close();
 
   chart->show();
+  chart->customplot()->replot();
   
+}
+
+void MainWindow::_addGraphToList(int graph_id, svgraph::GraphParams &p)
+{
+  QListWidgetItem *wi = new QListWidgetItem(svgraph::GraphTypes.value(p.type), ui->listGraphs);
+  wi->setData(Qt::DecorationRole, p.line_color);
+  wi->setData(Qt::UserRole, graph_id);
 }
 
 void MainWindow::on_bnAddGraph_clicked()
 {
-  SvGraphParamsDialog* chDlg = new SvGraphParamsDialog();
-  chDlg->setModal(true);
-  chDlg->show();
+  svgraph::SvGraphParamsDialog* chDlg = new svgraph::SvGraphParamsDialog();
   
-  if(chDlg->result() == QDialog::Accepted)
+  if(chDlg->exec() == QDialog::Accepted)
   {
-    qDebug() << "ok";
+    svgraph::GraphParams p = chDlg->graph_params;
+    
+    int graph_id = p.type;
+    
+    /* если такой график уже есть, то ничего не добавляем */
+    if(_chart_w->findGraph(graph_id)) 
+      QMessageBox::information(this, "Info", "This type grap is already present", QMessageBox::Ok);
+    
+    else {
+      _chart_w->addGraph(graph_id, p);
+      _addGraphToList(graph_id, p);
+    }
+    
+    ui->listGraphs->setCurrentItem(ui->listGraphs->findItems(svgraph::GraphTypes.value(graph_id), Qt::MatchExactly).first());
+    
   }
   
-//  int graph_id = ui->cbViewType->currentData().toInt();
+  chDlg->~SvGraphParamsDialog();
   
-//  /* если такой график уже есть, то ничего не добавляем и выходим */
-//  if(_chart_w->findGraph(graph_id))
-//    return;
-  
-//  svchart::GraphParams gp;
-  
-//  _chart_w->addGraph(graph_id, gp);
   
 }
 
 
+void MainWindow::on_bnEditGraph_clicked()
+{
+ 
+  int graph_id = ui->listGraphs->currentIndex().data(Qt::UserRole).toInt();
+  
+  svgraph::GraphParams p = _chart_w->graphParams(graph_id);
+  
+  svgraph::SvGraphParamsDialog* chDlg = new svgraph::SvGraphParamsDialog(0, &p);
+  
+  if(chDlg->exec() == QDialog::Accepted)
+  {
+    p = chDlg->graph_params;
+    _chart_w->setGraphParams(graph_id, p);
+    
+    ui->listGraphs->currentItem()->setData(Qt::DecorationRole, p.line_color);
+    
+  }
+  
+  chDlg->~SvGraphParamsDialog();
+  
+}
+
+void MainWindow::on_bnRemoveGraph_clicked()
+{
+    int graph_id = ui->listGraphs->currentIndex().data(Qt::UserRole).toInt();
+    
+    _chart_w->removeGraph(graph_id);
+    ui->listGraphs->takeItem(ui->listGraphs->currentRow());
+    
+    ui->bnEditGraph->setEnabled(ui->listGraphs->count() > 0);
+    ui->bnRemoveGraph->setEnabled(ui->listGraphs->count() > 0);
+}
+
+void MainWindow::on_listGraphs_currentRowChanged(int currentRow)
+{
+  ui->bnEditGraph->setEnabled(ui->listGraphs->count() > 0);
+  ui->bnRemoveGraph->setEnabled(ui->listGraphs->count() > 0);
+}
+
+void MainWindow::on_listGraphs_doubleClicked(const QModelIndex &index)
+{
+    on_bnEditGraph_clicked();
+}

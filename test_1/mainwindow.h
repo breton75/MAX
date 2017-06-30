@@ -26,7 +26,7 @@ QT_CHARTS_USE_NAMESPACE
 #include "libusb.h"
 #include "pull_usb.h"
 #include "sv_chartwidget.h"
-#include "sv_graphparamsdialog.h"
+#include "sv_graph.h"
 
 #include "../../Common/sv_settings.h"
 
@@ -44,14 +44,16 @@ struct GraphInfo {
 
 #pragma pack(1)
 struct FileHeader {
-  char signature[8] = {'F', 'L', 'O', 'W', 'T', 'E', 'S', 'T'};
+  char signature[15] = {'F','L','O','W',' ','R','A','T','E',' ','S','T','A','N','D'};
   int graph_count;
 };
 #pragma pack(pop)
 
 #pragma pack(1)
 struct GraphHeader {
-  char legend[256];
+//  int legend_length;
+//  uchar legend[256];
+//  QByteArray legend;
   int graph_id;
   int line_width;
   quint32 line_color;
@@ -67,6 +69,8 @@ class MainWindow : public QMainWindow
 {
   Q_OBJECT
   
+  QString FILE_EXT = "frs";
+  
 public:
   explicit MainWindow(QWidget *parent = 0);
   ~MainWindow();
@@ -78,7 +82,6 @@ private slots:
   void on_bnGetDeviceList_clicked();
   void on_bnOneShot_clicked();
   void on_bnCycle_clicked();
-  void on_cbViewType_currentIndexChanged(int index);
   
   void new_data(pullusb::fres *result);
   
@@ -91,6 +94,14 @@ private slots:
   void on_bnAddGraph_clicked();
   
   void on_bnSaveToFile_clicked(bool checked);
+  
+  void on_bnEditGraph_clicked();
+  
+  void on_bnRemoveGraph_clicked();
+  
+  void on_listGraphs_currentRowChanged(int currentRow);
+  
+  void on_listGraphs_doubleClicked(const QModelIndex &index);
   
 private:
   Ui::MainWindow *ui;
@@ -109,15 +120,12 @@ private:
   QMap<int, QString> _plot_types;
   
   
-//  QList<int> _graphList;
-  
-//  int _tick = 0;
-//  qreal _y_range = 1;
-  
   svchart::ChartParams _chp;
 
   QFile *_file = nullptr;
-   
+  
+  void _addGraphToList(int graph_id, svgraph::GraphParams &p);
+  
 };
 
 
