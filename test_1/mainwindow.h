@@ -27,8 +27,10 @@ QT_CHARTS_USE_NAMESPACE
 #include "pull_usb.h"
 #include "sv_chartwidget.h"
 #include "sv_graph.h"
+#include "sv_arduino_max.h"
 
 #include "../../Common/sv_settings.h"
+
 
 namespace Ui {
 class MainWindow;
@@ -87,20 +89,12 @@ private slots:
   
 //  void on_checkSaveToFile_clicked(bool checked);
   void on_bnSaveFileSelectPath_clicked();
-
- 
   void on_bnOpenFile_clicked();
-  
   void on_bnAddGraph_clicked();
-  
   void on_bnSaveToFile_clicked(bool checked);
-  
   void on_bnEditGraph_clicked();
-  
   void on_bnRemoveGraph_clicked();
-  
   void on_listGraphs_currentRowChanged(int currentRow);
-  
   void on_listGraphs_doubleClicked(const QModelIndex &index);
   
 private:
@@ -112,6 +106,8 @@ private:
   int _timerId;
   
   pullusb::MAX35101EV_ANSWER _max_data;
+  
+  QMap<svgraph::GraphIDs, qreal> _calcs;
   
 //  svchart::Chart *_chart = nullptr;
 //  QChartView *chartView;
@@ -125,6 +121,8 @@ private:
   QFile *_file = nullptr;
   
   void _addGraphToList(int graph_id, svgraph::GraphParams &p);
+  
+  svarduinomax::SvArduinoWidget *arduino;
   
 };
 

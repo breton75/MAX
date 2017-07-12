@@ -31,7 +31,8 @@ SOURCES += main.cpp\
     ../../Common/sv_settings.cpp \
     sv_chartwidget.cpp \
     ../../Common/qcustomplot/qcustomplot.cpp \
-    sv_graph.cpp
+    sv_graph.cpp \
+    sv_arduino_max.cpp
 
 
 HEADERS  += mainwindow.h \
@@ -41,10 +42,12 @@ HEADERS  += mainwindow.h \
     ../../Common/sv_fnt.h \
     sv_chartwidget.h \
     ../../Common/qcustomplot/qcustomplot.h \
-    sv_graph.h
+    sv_graph.h \
+    sv_arduino_max.h
 
 FORMS    += mainwindow.ui \
-    sv_graphparamsdialog.ui
+    sv_graphparamsdialog.ui \
+    engine_control.ui
 
 win32: LIBS += -L$$PWD/../../libusb-1.0.21/MinGW32/dll/ -llibusb-1.0
 

@@ -23,8 +23,8 @@ svgraph::SvGraphParamsDialog::SvGraphParamsDialog(QWidget *parent, svgraph::Grap
   }
   
   
-  foreach (int key, GraphTypes.keys()) {
-    ui->cbGraphType->addItem(GraphTypes.value(key), QVariant(key));
+  foreach (svgraph::GraphIDs key, GraphTypes.keys()) {
+    ui->cbGraphType->addItem(GraphTypes.value(key), int(key));
   }
   
   if(params) {
@@ -58,7 +58,7 @@ void svgraph::SvGraphParamsDialog::accept()
   graph_params.line_color = QColor(ui->cbLineColor->currentText());
   graph_params.line_style = ui->cbLineStyle->currentData().toInt();
   graph_params.line_width = ui->spinLineWidth->value();
-  graph_params.type = ui->cbGraphType->currentData().toInt();
+  graph_params.type = static_cast<svgraph::GraphIDs> (ui->cbGraphType->currentData().toInt());
   
   QDialog::accept();
 }

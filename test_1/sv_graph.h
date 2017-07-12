@@ -14,15 +14,24 @@ class SvGraphParamsDialog;
 
 namespace svgraph {
 
+  enum GraphIDs{
+    giVpot = 0,
+    giTOFdiff,
+    gitAvg,
+    giVsnd,
+    giTemperature
+  };
+
   /* режимы отображения */
-  const QMap<int, QString> GraphTypes = {{0, "Скорость потока м/с."},
-               {1, "TOF diff нс."},
-               {2, "(t1 + t2) / 2"},
-               {3, "Скорость звука (м/с)."}};
+  const QMap<GraphIDs, QString> GraphTypes = {{giVpot, "Скорость потока м/с."},
+               {giTOFdiff, "TOF diff нс."},
+               {gitAvg, "(t1 + t2) / 2"},
+               {giVsnd, "Скорость звука (м/с)."},
+               {giTemperature, "Температура"}};
 
   
   struct GraphParams {
-    int type = 0;  // "Скорость потока м/с."
+    GraphIDs type = giVpot;  // "Скорость потока м/с."
     int line_width = 1;
     QColor line_color = Qt::red;
     int line_style = static_cast<int> (Qt::SolidLine);

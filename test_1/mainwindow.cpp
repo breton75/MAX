@@ -41,6 +41,23 @@ MainWindow::MainWindow(QWidget *parent) :
   ui->verticalLayout_7->addWidget(_chart_w);
 //  _chart_w->show();
   
+  /* параметры arduino */
+  svarduinomax::SvArduinoWidgetParams ardp;
+  ardp.ip = AppParams::readParam(this, "Arduino", "ip", "192.168.44.44").toString();
+  ardp.port = AppParams::readParam(this, "Arduino", "port", 35580).toInt();
+  ardp.spin_clockwise = AppParams::readParam(this, "Arduino", "spin_clockwise", true).toBool();
+  ardp.spin_speed = AppParams::readParam(this, "Arduino", "spin_speed", 100).toInt();
+  ardp.temperature_period = AppParams::readParam(this, "Arduino", "temperature_period", 1).toInt();
+  ardp.temperature_period_enable = AppParams::readParam(this, "Arduino", "temperature_period_enable", true).toBool();
+  ardp.turn_angle = AppParams::readParam(this, "Arduino", "turn_angle", 180).toInt();
+  ardp.turn_angle_enable = AppParams::readParam(this, "Arduino", "turn_angle_enable", false).toBool();
+  ardp.turn_count = AppParams::readParam(this, "Arduino", "turn_count", 1).toInt();
+  ardp.turn_count_enable = AppParams::readParam(this, "Arduino", "turn_count_enable", false).toBool();
+  ardp.voltage = AppParams::readParam(this, "Arduino", "voltage", 12).toInt();
+//  ardp. = AppParams::readParam(this, "Arduino", "", );
+  
+  arduino = new svarduinomax::SvArduinoWidget(ardp, this);
+  ui->verticalLayout_9->addWidget(arduino);
   
   /* параметры главного окна */
   AppParams::WindowParams p = AppParams::readWindowParams(this);
@@ -54,13 +71,19 @@ MainWindow::MainWindow(QWidget *parent) :
   ui->dockPlot->move(gw.position);
   ui->dockPlot->setWindowState(gw.state);
   
+  /* параметры окна arduino */
+  AppParams::WindowParams aw = AppParams::readWindowParams(this, "ARDUINO WINDOW");
+  ui->dockArduino->resize(aw.size);
+  ui->dockArduino->move(aw.position);
+  ui->dockArduino->setWindowState(aw.state);
+  
   /* читаем информацию о графиках */
   int gcnt = AppParams::readParam(this, "Chart", "GraphCount", 0).toInt();
   
   for(int i = 0; i < gcnt; i++) {
     svgraph::GraphParams p;
     
-    p.type = AppParams::readParam(this, QString("Graph_%1").arg(i), "TypeID", 0).toInt();
+    p.type = static_cast<svgraph::GraphIDs>(AppParams::readParam(this, QString("Graph_%1").arg(i), "TypeID", 0).toInt());
     p.line_color = QColor(AppParams::readParam(this, QString("Graph_%1").arg(i), "LineColor", "red").toString());
     p.line_style = AppParams::readParam(this, QString("Graph_%1").arg(i), "LineStyle", static_cast<int>(Qt::SolidLine)).toInt();
     p.line_width = AppParams::readParam(this, QString("Graph_%1").arg(i), "LineWidth", 1).toInt();
@@ -73,6 +96,11 @@ MainWindow::MainWindow(QWidget *parent) :
   
   if(ui->listGraphs->count() > 0)
     ui->listGraphs->setCurrentRow(0);
+  
+  /* готовим карту для вычисляемых значений */
+  foreach (svgraph::GraphIDs key, svgraph::GraphTypes.keys())
+    _calcs.insert(key, 0);
+
   
 }
 
@@ -95,6 +123,8 @@ MainWindow::~MainWindow()
   /* сохраняем парметры программы */
   AppParams::saveWindowParams(this, this->size(), this->pos(), this->windowState());
   AppParams::saveWindowParams(ui->dockPlot, ui->dockPlot->size(), ui->dockPlot->pos(), ui->dockPlot->windowState(), "PLOT WINDOW");
+  AppParams::saveWindowParams(ui->dockArduino, ui->dockArduino->size(), ui->dockArduino->pos(), ui->dockArduino->windowState(), "ARDUINO WINDOW");
+  
   AppParams::saveParam(this, "General", "RequestTimer", ui->spinTimer->value());
   AppParams::saveParam(this, "General", "Log", ui->checkLog->isChecked());
   AppParams::saveParam(this, "General", "LastDeviceName", ui->cbDevices->currentText());
@@ -109,13 +139,27 @@ MainWindow::~MainWindow()
   AppParams::saveParam(this, "Chart", "GraphCount", _chart_w->graphCount());
   
   for (int i = 0; i < _chart_w->graphList().count(); i++) {
-    int graph_id = _chart_w->graphList()[i];
-    AppParams::saveParam(this, QString("Graph_%1").arg(i), "TypeID", graph_id);
+    svgraph::GraphIDs graph_id = _chart_w->graphList()[i];
+    AppParams::saveParam(this, QString("Graph_%1").arg(i), "TypeID", int(graph_id));
     AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineColor", _chart_w->graphParams(graph_id).line_color.name());
     AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineStyle", _chart_w->graphParams(graph_id).line_style);
     AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineWidth", _chart_w->graphParams(graph_id).line_width);
     AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineLegend", _chart_w->graphParams(graph_id).legend);
   }
+  
+  /* параметры arduino */
+  AppParams::saveParam(this, "Arduino", "ip", arduino->params().ip);
+  AppParams::saveParam(this, "Arduino", "port", arduino->params().port);
+  AppParams::saveParam(this, "Arduino", "spin_clockwise", arduino->params().spin_clockwise);
+  AppParams::saveParam(this, "Arduino", "spin_speed", arduino->params().spin_speed);
+  AppParams::saveParam(this, "Arduino", "temperature_period", arduino->params().temperature_period);
+  AppParams::saveParam(this, "Arduino", "temperature_period_enable", arduino->params().temperature_period_enable);
+  AppParams::saveParam(this, "Arduino", "turn_angle", arduino->params().turn_angle);
+  AppParams::saveParam(this, "Arduino", "turn_angle_enable", arduino->params().turn_angle_enable);
+  AppParams::saveParam(this, "Arduino", "turn_count", arduino->params().turn_count);
+  AppParams::saveParam(this, "Arduino", "turn_count_enable", arduino->params().turn_count_enable);
+  AppParams::saveParam(this, "Arduino", "voltage", arduino->params().voltage);
+  
   
   delete ui;
   
@@ -272,40 +316,22 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
     qreal t1 = qFromBigEndian<qint32>(_max_data.hit_up_average) / 262.14;   // время пролета 1, в нс.
     qreal t2 = qFromBigEndian<qint32>(_max_data.hit_down_average) / 262.14; // время пролета 2, в нс.
     qreal L = 0.0895; // расстояние между излучателями в метрах
-    
-    qreal TOFdiff = t1 - t2;
-    qreal Vsnd = 2 * L / ((t1 + t2) / 1000000000); // определяем скорость звука в среде, м/с.
-    qreal Vpot = 3*Vsnd * (TOFdiff / (t1 + t2)); // определяем скорость потока, м/с.
-    qreal tAvg = (t1 + t2) / 2;
 
-    qreal val;
+    /** вычисляем значения **/
+    _calcs[svgraph::giTOFdiff] = t1 - t2;
+    _calcs[svgraph::giVsnd] = 2 * L / ((t1 + t2) / 1000000000); // определяем скорость звука в среде, м/с.
+    _calcs[svgraph::giVpot] = 3 * _calcs.value(svgraph::giVsnd) * (_calcs.value(svgraph::giTOFdiff) / (t1 + t2)); // определяем скорость потока, м/с.
+    _calcs[svgraph::gitAvg] = (t1 + t2) / 2;
+    _calcs[svgraph::giTemperature] = arduino->currentTemperature();
     
     for(int i = 0; i < _chart_w->graphList().count(); i++) {
       
-      int graph_id = _chart_w->graphList()[i];
+      svgraph::GraphIDs graph_id = _chart_w->graphList()[i];
       
-      switch (graph_id) {
-        case 0:
-          val = Vpot;
-          break;
-          
-        case 1:
-          val = TOFdiff;
-          break;
-          
-        case 2:
-          val = tAvg;
-          break;
-          
-        default:
-          val = Vsnd;
-          
-      }
-      
-      _chart_w->appendData(graph_id, val);
+      _chart_w->appendData(graph_id, _calcs[graph_id]);
       
       if(_file)
-          _file->write((const char*)&val, sizeof(qreal));
+          _file->write((const char*)&_calcs[graph_id], sizeof(qreal));
       
     }
         
@@ -315,7 +341,9 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
       ui->textLog->append(QString("%1%2\tHit Up Avg: %3\tHit Down Avg: %4\tTOF diff: %5\tVpot: %6\tVsnd: %7")
                           .arg(_chart_w->pointCount())
                           .arg(QTime::currentTime().toString("mm:ss.zzz"))
-                          .arg(t1).arg(t2).arg(TOFdiff, 0, 'f', 6).arg(Vpot, 0, 'f', 3).arg(Vsnd, 0, 'f', 4));
+                          .arg(t1).arg(t2).arg(_calcs.value(svgraph::giTOFdiff), 0, 'f', 6)
+                          .arg(_calcs.value(svgraph::giVpot), 0, 'f', 3)
+                          .arg(_calcs.value(svgraph::giVsnd), 0, 'f', 4));
       
     MUTEX1.unlock();
     
@@ -373,19 +401,18 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
     if(checked) {
         ui->bnSaveToFile->setText("Stop saving");
         ui->bnSaveToFile->setStyleSheet("background-color: tomato");
-      
-        QDateTime dt = QDateTime::currentDateTime();
-        QString fn = ui->editSaveFileNameTemplate->text();
-        QString path = ui->editSaveFilePath->text();
 
-        QString folder = svfnt::get_folder_name(dt, FILE_EXT, path);
-        if(folder.isEmpty()) {
-            QMessageBox::critical(0, "Error", "Неверный путь для сохранения", QMessageBox::Ok);
+        svfnt::SvRE re(QDateTime::currentDateTime());
+        re.relist << qMakePair(svfnt::RE_EXT, FILE_EXT);
+        
+        QString s = svfnt::get_file_path(ui->editSaveFilePath->text(), ui->editSaveFileNameTemplate->text(), re);
+        if(s.isEmpty()) {
+            QMessageBox::critical(0, "Error", "Неверный путь или имя файла для сохранения", QMessageBox::Ok);
             ui->bnSaveToFile->setChecked(false);
             return;
         }
 
-        QString s = folder + svfnt::replace_re(dt, FILE_EXT, fn) + "." + FILE_EXT;
+        s += FILE_EXT;
 
         MUTEX1.lock();
 
@@ -410,7 +437,7 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
           /* параметры графиков */
           for(int i = 0; i < _chart_w->graphList().count(); i++) {
             
-            int graph_id = _chart_w->graphList()[i];
+            svgraph::GraphIDs graph_id = _chart_w->graphList()[i];
             
             GraphHeader graph_head;
             graph_head.graph_id = graph_id;
@@ -459,10 +486,10 @@ void MainWindow::on_bnSaveFileSelectPath_clicked()
 
 void MainWindow::on_bnOpenFile_clicked()
 {
-  QDateTime dt = QDateTime::currentDateTime();
-  QString dirpath = ui->editSaveFilePath->text();
+  svfnt::SvRE re(QDateTime::currentDateTime());
+  re.relist << qMakePair(svfnt::RE_EXT, FILE_EXT);
   
-  QDir dir(svfnt::get_folder_name(dt, FILE_EXT, dirpath));
+  QDir dir(svfnt::get_folder_path(ui->editSaveFilePath->text(), re));
   if(!dir.exists())
     dir.setPath(QDir::currentPath());
   
@@ -492,13 +519,13 @@ void MainWindow::on_bnOpenFile_clicked()
   
 //  qDebug() << 
   /* добавляем графики */
-  QList<int> graph_ids;
+  QList<svgraph::GraphIDs> graph_ids;
   for(int i = 0; i < graph_cnt; i++) {
     GraphHeader grah_head;
     f.read((char*)&grah_head, sizeof(GraphHeader));
     
     svgraph::GraphParams graph_params;
-    graph_params.type = grah_head.graph_id;
+    graph_params.type = static_cast<svgraph::GraphIDs>(grah_head.graph_id);
     graph_params.line_color = QColor::fromRgb(static_cast<QRgb>(grah_head.line_color));
     graph_params.line_style = grah_head.line_style;
     graph_params.line_width = grah_head.line_width;
@@ -543,7 +570,7 @@ void MainWindow::on_bnAddGraph_clicked()
   {
     svgraph::GraphParams p = chDlg->graph_params;
     
-    int graph_id = p.type;
+    svgraph::GraphIDs graph_id = p.type;
     
     /* если такой график уже есть, то ничего не добавляем */
     if(_chart_w->findGraph(graph_id)) 
@@ -567,7 +594,7 @@ void MainWindow::on_bnAddGraph_clicked()
 void MainWindow::on_bnEditGraph_clicked()
 {
  
-  int graph_id = ui->listGraphs->currentIndex().data(Qt::UserRole).toInt();
+  svgraph::GraphIDs graph_id = static_cast<svgraph::GraphIDs>(ui->listGraphs->currentIndex().data(Qt::UserRole).toInt());
   
   svgraph::GraphParams p = _chart_w->graphParams(graph_id);
   
@@ -588,7 +615,7 @@ void MainWindow::on_bnEditGraph_clicked()
 
 void MainWindow::on_bnRemoveGraph_clicked()
 {
-    int graph_id = ui->listGraphs->currentIndex().data(Qt::UserRole).toInt();
+    svgraph::GraphIDs graph_id = static_cast<svgraph::GraphIDs> (ui->listGraphs->currentIndex().data(Qt::UserRole).toInt());
     
     _chart_w->removeGraph(graph_id);
     ui->listGraphs->takeItem(ui->listGraphs->currentRow());

@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>269</width>
-    <height>692</height>
+    <width>402</width>
+    <height>754</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QVBoxLayout" name="verticalLayout_6">
+   <layout class="QVBoxLayout" name="verticalLayout_10">
     <item>
      <widget class="QGroupBox" name="groupBox_2">
       <property name="font">
@@ -24,7 +24,7 @@
        </font>
       </property>
       <property name="title">
-       <string>Device</string>
+       <string>MAX 35101 EVALUATE</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
@@ -54,7 +54,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Update</string>
+            <string>Обновить</string>
            </property>
           </widget>
          </item>
@@ -72,7 +72,7 @@
        </font>
       </property>
       <property name="title">
-       <string>Pull data</string>
+       <string>Опрос данных</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
@@ -86,7 +86,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Timer</string>
+            <string>Период</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -133,7 +133,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Start</string>
+            <string>Старт</string>
            </property>
           </widget>
          </item>
@@ -169,11 +169,42 @@
             </font>
            </property>
            <property name="text">
-            <string>One shot</string>
+            <string>Однократно</string>
            </property>
           </widget>
          </item>
         </layout>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="groupBox_5">
+      <property name="font">
+       <font>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="title">
+       <string>Синхронизировать с Arduino</string>
+      </property>
+      <property name="checkable">
+       <bool>true</bool>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_6">
+       <item>
+        <widget class="QPushButton" name="pushButton">
+         <property name="font">
+          <font>
+           <weight>50</weight>
+           <bold>false</bold>
+          </font>
+         </property>
+         <property name="text">
+          <string>Управление</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -187,7 +218,7 @@
        </font>
       </property>
       <property name="title">
-       <string>File</string>
+       <string>Сохранение файлов</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
@@ -213,7 +244,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Name template</string>
+            <string>Шаблон имени</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -258,7 +289,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Path for save</string>
+            <string>Путь</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -316,7 +347,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Open file</string>
+            <string>Открыть</string>
            </property>
           </widget>
          </item>
@@ -345,7 +376,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Save to file</string>
+            <string>Сохранить</string>
            </property>
            <property name="checkable">
             <bool>true</bool>
@@ -369,7 +400,7 @@
        </font>
       </property>
       <property name="title">
-       <string>Graphics</string>
+       <string>Графики</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_5">
        <property name="spacing">
@@ -513,7 +544,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>269</width>
+     <width>402</width>
      <height>21</height>
     </rect>
    </property>
@@ -601,6 +632,43 @@
      </property>
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_7">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+      </layout>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockArduino">
+   <property name="floating">
+    <bool>true</bool>
+   </property>
+   <property name="allowedAreas">
+    <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_3">
+    <layout class="QVBoxLayout" name="verticalLayout_11">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>2</number>
+     </property>
+     <property name="topMargin">
+      <number>2</number>
+     </property>
+     <property name="rightMargin">
+      <number>2</number>
+     </property>
+     <property name="bottomMargin">
+      <number>2</number>
+     </property>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_9">
        <property name="spacing">
         <number>0</number>
        </property>

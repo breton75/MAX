@@ -83,23 +83,23 @@ public:
     void setMaxMinY(qreal y) { if(y > _y_max) _y_max = y * 1.01; 
                                if(y < _y_min) _y_min = y * 1.01; }
     
-    void addGraph(int graph_id, svgraph::GraphParams &graphParams);
+    void addGraph(svgraph::GraphIDs graph_id, svgraph::GraphParams &graphParams);
     
-    void removeGraph(int graph_id);
+    void removeGraph(svgraph::GraphIDs graph_id);
     
-    bool findGraph(int graph_id) { return _graphs.find(graph_id) != _graphs.end(); }
+    bool findGraph(svgraph::GraphIDs graph_id) { return _graphs.find(graph_id) != _graphs.end(); }
     
-    void setGraphParams(int graph_id, svgraph::GraphParams &graphParams);
+    void setGraphParams(svgraph::GraphIDs graph_id, svgraph::GraphParams &graphParams);
     
-    QList<int> graphList() { return _graphs.keys(); }
+    QList<svgraph::GraphIDs> graphList() { return _graphs.keys(); }
     
     int graphCount() { return _customplot->graphCount(); }
     
-    void appendData(int graph_id, double y);
+    void appendData(svgraph::GraphIDs graph_id, double y);
     
-    void insertData(int graph_id, QCPData xy);
+    void insertData(svgraph::GraphIDs graph_id, QCPData xy);
     
-    svgraph::GraphParams graphParams(int graph_id) { return _graphs.value(graph_id)->params; }
+    svgraph::GraphParams graphParams(svgraph::GraphIDs graph_id) { return _graphs.value(graph_id)->params; }
     
     int pointCount() { return _customplot->graph()->data()->count(); }
     
@@ -108,7 +108,7 @@ public:
 private:
     
     QCustomPlot *_customplot;
-    QMap<int, svchart::GRAPH*> _graphs;
+    QMap<svgraph::GraphIDs, svchart::GRAPH*> _graphs;
     svchart::ChartParams _params;
     
     qreal _y_max = -1000000000;

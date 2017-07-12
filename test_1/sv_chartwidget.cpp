@@ -224,7 +224,7 @@ void svchart::SvChartWidget::setupUi()
     QMetaObject::connectSlotsByName(this);
 } // setupUi
 
-void svchart::SvChartWidget::addGraph(int graph_id, svgraph::GraphParams &graphParams)
+void svchart::SvChartWidget::addGraph(svgraph::GraphIDs graph_id, svgraph::GraphParams &graphParams)
 {
   /* если такой график уже есть, то ничего не добавляем и выходим */
   if(findGraph(graph_id))
@@ -245,7 +245,7 @@ void svchart::SvChartWidget::addGraph(int graph_id, svgraph::GraphParams &graphP
   
 }
 
-void svchart::SvChartWidget::setGraphParams(int graph_id, svgraph::GraphParams &graphParams)
+void svchart::SvChartWidget::setGraphParams(svgraph::GraphIDs graph_id, svgraph::GraphParams &graphParams)
 {
   _graphs.value(graph_id)->params = graphParams;
   
@@ -259,7 +259,7 @@ void svchart::SvChartWidget::setGraphParams(int graph_id, svgraph::GraphParams &
   
 }
 
-void svchart::SvChartWidget::removeGraph(int graph_id)
+void svchart::SvChartWidget::removeGraph(svgraph::GraphIDs graph_id)
 {
   /* очищаем и удаляем graph */
   _graphs.value(graph_id)->graph->clearData();
@@ -275,7 +275,7 @@ void svchart::SvChartWidget::removeGraph(int graph_id)
   
 }
 
-void svchart::SvChartWidget::appendData(int graph_id, double y)
+void svchart::SvChartWidget::appendData(svgraph::GraphIDs graph_id, double y)
 {
   double x = _graphs.value(graph_id)->graph->data()->count();
   _graphs.value(graph_id)->graph->data()->insert(x, QCPData(x, y));
@@ -286,7 +286,7 @@ void svchart::SvChartWidget::appendData(int graph_id, double y)
     setActualYRange();
 }
 
-void svchart::SvChartWidget::insertData(int graph_id, QCPData xy)
+void svchart::SvChartWidget::insertData(svgraph::GraphIDs graph_id, QCPData xy)
 {
   _graphs.value(graph_id)->graph->data()->insert(xy.key, xy);
   
