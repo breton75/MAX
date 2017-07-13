@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui charts printsupport
+QT       += core gui charts printsupport network sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -32,7 +32,11 @@ SOURCES += main.cpp\
     sv_chartwidget.cpp \
     ../../Common/qcustomplot/qcustomplot.cpp \
     sv_graph.cpp \
-    sv_arduino_max.cpp
+    sv_arduino_max.cpp \
+    ../../svlib/sv_log.cpp \
+    ../../svlib/sv_secondmeter.cpp \
+    ../../svlib/sv_tcpserverclient.cpp \
+    ../../Common/log.cpp
 
 
 HEADERS  += mainwindow.h \
@@ -43,7 +47,11 @@ HEADERS  += mainwindow.h \
     sv_chartwidget.h \
     ../../Common/qcustomplot/qcustomplot.h \
     sv_graph.h \
-    sv_arduino_max.h
+    sv_arduino_max.h \
+    ../../svlib/sv_log.h \
+    ../../svlib/sv_secondmeter.h \
+    ../../svlib/sv_tcpserverclient.h \
+    ../../Common/log.h
 
 FORMS    += mainwindow.ui \
     sv_graphparamsdialog.ui \

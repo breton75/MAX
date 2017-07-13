@@ -31,6 +31,8 @@ QT_CHARTS_USE_NAMESPACE
 
 #include "../../Common/sv_settings.h"
 
+#include "../../svlib/sv_log.h"
+#include "../../svlib/sv_tcpserverclient.h"
 
 namespace Ui {
 class MainWindow;
@@ -80,6 +82,8 @@ public:
   libusb_device_handle* handle;
 //  QTimer tm;
   
+  svlog::SvLog log;
+  
 private slots:
   void on_bnGetDeviceList_clicked();
   void on_bnOneShot_clicked();
@@ -123,6 +127,8 @@ private:
   void _addGraphToList(int graph_id, svgraph::GraphParams &p);
   
   svarduinomax::SvArduinoWidget *arduino;
+  
+  SvTcpClient *_client;
   
 };
 

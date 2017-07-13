@@ -2,14 +2,19 @@
 #include "ui_mainwindow.h"
 
 #include "../../Common/sv_fnt.h"
+//#include "../../svlib/sv_log.h"
 
 QMutex MUTEX1;
+
 
 MainWindow::MainWindow(QWidget *parent) :
   QMainWindow(parent),
   ui(new Ui::MainWindow)
 {
   ui->setupUi(this);
+  
+  /* лог */
+  log = svlog::SvLog(ui->textLog);
   
   /* заполняем список устройств */
   on_bnGetDeviceList_clicked();
@@ -101,6 +106,10 @@ MainWindow::MainWindow(QWidget *parent) :
   foreach (svgraph::GraphIDs key, svgraph::GraphTypes.keys())
     _calcs.insert(key, 0);
 
+  
+
+  
+  _client = new SvTcpClient(log, arduino->params().ip, arduino->params().port);
   
 }
 
