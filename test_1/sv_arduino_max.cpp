@@ -1,26 +1,34 @@
 #include "sv_arduino_max.h"
-#include "ui_engine_control.h"
+//#include "ui_engine_control.h"
 
-svarduinomax::SvArduinoWidget::SvArduinoWidget(SvArduinoWidgetParams params, QWidget *parent) : 
+svarduinomax::SvArduinoWidget::SvArduinoWidget(svlog::SvLog &log,
+                                               SvArduinoWidgetParams params,
+                                               QWidget *parent) : 
   QWidget(parent)
 {
   _params = params;
   
   setupUi();
   
+  _log = svlog::SvLog(textLog, this);
   editIp->setText(_params.ip);
   spinPort->setValue(_params.port);
   rbClockwise->setChecked(_params.spin_clockwise);
   rbContraClockwise->setChecked(!_params.spin_clockwise);
   sliderSpinSpeed->setValue(_params.spin_speed);
-  gbTurnAngle->setEnabled(_params.turn_angle_enable);
+  gbTurnAngle->setChecked(_params.turn_angle_enable);
   spinTurnAngle->setValue(_params.turn_angle);
-  gbTurnCount->setEnabled(_params.turn_count_enable);
+  gbTurnCount->setChecked(_params.turn_count_enable);
   spinTurnCount->setValue(_params.turn_count);
-  gbTemperature->setEnabled(_params.temperature_period_enable);
+  gbTemperature->setChecked(_params.temperature_period_enable);
   spinTemperaturePeriod->setValue(_params.temperature_period);
   spinVoltage->setValue(_params.voltage);
   
+  
+  _log << "opopo";
+  _client = new svtcp::SvTcpClient(_log, _params.ip, _params.port);
+  
+//  connect()
   
 }
 
@@ -283,62 +291,139 @@ void svarduinomax::SvArduinoWidget::setupUi()
 
 void svarduinomax::SvArduinoWidget::on_bnStartStop_clicked(bool checked)
 {
-  qDebug() << checked;
+  if(checked)
+    start();
+  
+  else 
+    stop();    
+
 }
+
+bool svarduinomax::SvArduinoWidget::start()
+{
+  _client->setIp(_params.ip);
+  _client->setPort(_params.port);  
+  
+  /** угол поворота **/
+  if(_client->connectToHost() != svtcp::SOCKET_OK) {
+    _log << svlog::Time << svlog::Critical << _client->lastError() << svlog::endl;
+    return false;
+  }
+  _client->sendData(QString("SET:TURN:ANGLE:%1").arg(gbTurnAngle->isChecked() ? QString::number(spinTurnAngle->value()) : "OFF"));
+  _client->disconnectFromHost();
+  
+  /** количество оборотов **/
+  if(_client->connectToHost() != svtcp::SOCKET_OK) {
+    _log << svlog::Time << svlog::Critical << _client->lastError() << svlog::endl;
+    return false;
+  }
+  qDebug() << 3;
+  _client->sendData(QString("SET:TURN:COUNT:%1").arg(gbTurnCount->isChecked() ? QString::number(spinTurnCount->value()) : "OFF"));
+  qDebug() << _log.currentLine();
+  _client->disconnectFromHost();
+  
+  
+  /** мощность двигателя **/
+  if(_client->connectToHost() != svtcp::SOCKET_OK) {
+    _log << svlog::Time << svlog::Critical << _client->lastError() << svlog::endl;
+    return false;
+  }
+  qDebug() << 4;
+  _client->sendData(QString("SET:ENGINE:PW:%1").arg(255 * int(sliderSpinSpeed->value()/100)));
+  _client->disconnectFromHost();
+  
+  _client->connectToHost();
+  _client->sendData(QString("START"));
+  _client->disconnectFromHost();
+  
+  bnStartStop->setText("Стоп");
+  bnStartStop->setStyleSheet("background-color: tomato");
+//  QApplication::processEvents();
+  
+  emit started();
+  return true;
+  
+}
+
+bool svarduinomax::SvArduinoWidget::stop()
+{
+  if(_client->connectToHost() != svtcp::SOCKET_OK) {
+    _log << svlog::Time << svlog::Critical << _client->lastError() << svlog::endl;
+    return false;
+  }
+  
+  _client->sendData(QString("STOP"));
+  _client->disconnectFromHost();
+  
+  bnStartStop->setText("Старт");
+  bnStartStop->setStyleSheet("");
+//  QApplication::processEvents();
+  
+  emit stopped();
+  return true;
+}
+
+
 
 void svarduinomax::SvArduinoWidget::on_rbClockwise_clicked(bool checked)
 {
-    
+    _params.spin_clockwise = true;
 }
 
 void svarduinomax::SvArduinoWidget::on_rbContraClockwise_clicked(bool checked)
 {
-    
+    _params.spin_clockwise = false;
 }
 
 void svarduinomax::SvArduinoWidget::on_sliderSpinSpeed_valueChanged(int value)
 {
-    
+    _params.spin_speed = value;
 }
 
 void svarduinomax::SvArduinoWidget::on_gbTurnAngle_clicked(bool checked)
 {
-    
+    _params.turn_angle_enable = checked;
 }
 
 void svarduinomax::SvArduinoWidget::on_spinTurnAngle_valueChanged(int arg1)
 {
-    
+    _params.turn_angle = spinTurnAngle->value();
 }
 
 void svarduinomax::SvArduinoWidget::on_gbTurnCount_clicked(bool checked)
 {
-    
+    _params.turn_count_enable = checked;
 }
 
 void svarduinomax::SvArduinoWidget::on_spinTurnCount_valueChanged(int arg1)
 {
-    
+    _params.turn_count = spinTurnCount->value();
 }
 
 void svarduinomax::SvArduinoWidget::on_gbTemperature_clicked(bool checked)
 {
-    
+    _params.temperature_period_enable = checked;
 }
 
 void svarduinomax::SvArduinoWidget::on_spinTemperaturePeriod_valueChanged(int arg1)
 {
-    
+    _params.temperature_period = spinTemperaturePeriod->value();
 }
 
 void svarduinomax::SvArduinoWidget::on_bnSendCmd_clicked()
 {
-    
+  on_editCmd_returnPressed();
 }
 
 void svarduinomax::SvArduinoWidget::on_editCmd_returnPressed()
 {
-    
+  _client->setIp(_params.ip);
+  _client->setPort(_params.port);
+  
+  _client->connectToHost();
+  if(!_client->connected()) return;
+  _client->sendData(editCmd->text());
+  _client->disconnectFromHost();
 }
 
 void svarduinomax::SvArduinoWidget::on_bnApply_clicked()
@@ -348,10 +433,10 @@ void svarduinomax::SvArduinoWidget::on_bnApply_clicked()
 
 void svarduinomax::SvArduinoWidget::on_editIp_textChanged(const QString &arg1)
 {
-    
+    _params.ip = editIp->text();
 }
 
 void svarduinomax::SvArduinoWidget::on_spinPort_valueChanged(int arg1)
 {
-    
+    _params.port = spinPort->value();
 }

@@ -61,7 +61,7 @@ MainWindow::MainWindow(QWidget *parent) :
   ardp.voltage = AppParams::readParam(this, "Arduino", "voltage", 12).toInt();
 //  ardp. = AppParams::readParam(this, "Arduino", "", );
   
-  arduino = new svarduinomax::SvArduinoWidget(ardp, this);
+  arduino = new svarduinomax::SvArduinoWidget(log, ardp, 0);
   ui->verticalLayout_9->addWidget(arduino);
   
   /* параметры главного окна */
@@ -107,9 +107,7 @@ MainWindow::MainWindow(QWidget *parent) :
     _calcs.insert(key, 0);
 
   
-
   
-  _client = new SvTcpClient(log, arduino->params().ip, arduino->params().port);
   
 }
 
@@ -254,6 +252,14 @@ void MainWindow::on_bnCycle_clicked()
     QMessageBox::information(this, "Info", "Необходимо добавить хотя бы один график");
     on_bnAddGraph_clicked();
     return;
+  }
+  
+  /** синхронизация с Arduino **/
+  if(ui->gbSynchronizeArduino->isChecked()) {
+    
+    if(!arduino->start())
+      return;
+    
   }
   
   ui->bnCycle->setEnabled(false);

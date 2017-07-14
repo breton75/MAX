@@ -23,9 +23,12 @@
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
 
-namespace Ui {
-class Form;
-}
+//namespace Ui {
+//class Form;
+//}
+
+#include "../../svlib/sv_log.h"
+#include "../../svlib/sv_tcpserverclient.h"
 
 namespace svarduinomax {
   
@@ -51,7 +54,11 @@ class svarduinomax::SvArduinoWidget : public QWidget
 {
   Q_OBJECT
 public:
-  explicit SvArduinoWidget(svarduinomax::SvArduinoWidgetParams params, QWidget *parent = 0);
+  explicit SvArduinoWidget(svlog::SvLog &log, 
+                           svarduinomax::SvArduinoWidgetParams params,
+                           QWidget *parent = 0);
+  
+  void setLog(svlog::SvLog &log) { _log = log; }
   
   qreal currentTemperature() { return _temperature; }
   quint32 currentTurnCount() { return _turn_count; }
@@ -61,6 +68,9 @@ public:
   
 private:
 //  Ui::Form *ui;
+  
+  svlog::SvLog _log;
+  svtcp::SvTcpClient *_client;
   
   QString _ip;
   quint32 _port;
@@ -116,6 +126,10 @@ private:
   QSpacerItem *horizontalSpacer;
   QPushButton *bnApply;
   QTextEdit *textLog;
+  
+public slots:
+  bool start();
+  bool stop();
   
 private slots:
   void on_bnStartStop_clicked(bool checked);

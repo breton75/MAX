@@ -128,7 +128,7 @@ private:
   
   svarduinomax::SvArduinoWidget *arduino;
   
-  SvTcpClient *_client;
+  svtcp::SvTcpClient *_client;
   
 };
 

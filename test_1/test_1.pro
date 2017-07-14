@@ -35,8 +35,7 @@ SOURCES += main.cpp\
     sv_arduino_max.cpp \
     ../../svlib/sv_log.cpp \
     ../../svlib/sv_secondmeter.cpp \
-    ../../svlib/sv_tcpserverclient.cpp \
-    ../../Common/log.cpp
+    ../../svlib/sv_tcpserverclient.cpp
 
 
 HEADERS  += mainwindow.h \
@@ -50,8 +49,7 @@ HEADERS  += mainwindow.h \
     sv_arduino_max.h \
     ../../svlib/sv_log.h \
     ../../svlib/sv_secondmeter.h \
-    ../../svlib/sv_tcpserverclient.h \
-    ../../Common/log.h
+    ../../svlib/sv_tcpserverclient.h
 
 FORMS    += mainwindow.ui \
     sv_graphparamsdialog.ui \
