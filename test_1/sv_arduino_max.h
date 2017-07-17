@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QDebug>
+#include <QException>
 
 #include <QtCore/QVariant>
 #include <QtWidgets/QAction>
@@ -23,9 +24,9 @@
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QWidget>
 
-//namespace Ui {
-//class Form;
-//}
+namespace Ui {
+class SvArduinoWidgetUi;
+}
 
 #include "../../svlib/sv_log.h"
 #include "../../svlib/sv_tcpserverclient.h"
@@ -36,12 +37,12 @@ namespace svarduinomax {
     QString ip = "192.168.44.44";
     quint32 port = 35580;
     bool spin_clockwise = true;
-    quint32 spin_speed = 100;
+    quint32 engine_pw = 100;
     bool turn_angle_enable = false;
     quint32 turn_angle = 180;
     bool turn_count_enable = false;
     quint32 turn_count = 1;
-    qreal voltage = 12;
+    qreal current_voltage = 12;
     bool temperature_period_enable = true;
     quint32 temperature_period = 1;
   };
@@ -50,13 +51,23 @@ namespace svarduinomax {
       
 }
 
+class SvException: public QException
+{
+public:
+    void raise(QString error) { err = error; throw *this; }
+    SvException *clone() const { return new SvException(*this); }
+
+    QString err;
+
+};
+
 class svarduinomax::SvArduinoWidget : public QWidget
 {
   Q_OBJECT
 public:
-  explicit SvArduinoWidget(svlog::SvLog &log, 
-                           svarduinomax::SvArduinoWidgetParams params,
-                           QWidget *parent = 0);
+  explicit SvArduinoWidget(svarduinomax::SvArduinoWidgetParams params,
+                           QTextEdit *logWidget = nullptr,
+                           QWidget *parent = nullptr);
   
   void setLog(svlog::SvLog &log) { _log = log; }
   
@@ -67,7 +78,7 @@ public:
   void setParams(svarduinomax::SvArduinoWidgetParams params) { _params = params; }
   
 private:
-//  Ui::Form *ui;
+  Ui::SvArduinoWidgetUi *ui;
   
   svlog::SvLog _log;
   svtcp::SvTcpClient *_client;
@@ -81,62 +92,67 @@ private:
   qreal _temperature;  
   qreal _voltage;
   
+  bool _started = false;
+  
   QTimer _temperature_timer;
   
   svarduinomax::SvArduinoWidgetParams _params;
   
-  /** контролы **/
-  void setupUi();
+  SvException _exception;
   
-  QVBoxLayout *verticalLayout_7;
-  QGroupBox *gbMain;
-  QVBoxLayout *verticalLayout;
-  QHBoxLayout *horizontalLayout_5;
-  QGroupBox *gbNetworkParams;
-  QVBoxLayout *verticalLayout_4;
-  QHBoxLayout *horizontalLayout_2;
-  QLabel *lblIp;
-  QLineEdit *editIp;
-  QHBoxLayout *horizontalLayout_3;
-  QLabel *lblPort;
-  QSpinBox *spinPort;
-  QPushButton *bnStartStop;
-  QGroupBox *gbSpinDirection;
-  QVBoxLayout *verticalLayout_2;
-  QRadioButton *rbClockwise;
-  QRadioButton *rbContraClockwise;
-  QGroupBox *gbSpinSpeed;
-  QVBoxLayout *verticalLayout_3;
-  QSlider *sliderSpinSpeed;
-  QGroupBox *gbTurnAngle;
-  QVBoxLayout *verticalLayout_5;
-  QSpinBox *spinTurnAngle;
-  QGroupBox *gbTurnCount;
-  QVBoxLayout *verticalLayout_6;
-  QSpinBox *spinTurnCount;
-  QGroupBox *gbTemperature;
-  QVBoxLayout *verticalLayout_9;
-  QSpinBox *spinTemperaturePeriod;
-  QHBoxLayout *horizontalLayout_4;
-  QLabel *lblVoltage;
-  QSpinBox *spinVoltage;
-  QHBoxLayout *horizontalLayout;
-  QPushButton *bnSendCmd;
-  QLineEdit *editCmd;
-  QSpacerItem *horizontalSpacer;
-  QPushButton *bnApply;
-  QTextEdit *textLog;
+  /** контролы **/
+//  void setupUi();
+  
+//  QVBoxLayout *verticalLayout_7;
+//  QGroupBox *gbMain;
+//  QVBoxLayout *verticalLayout;
+//  QHBoxLayout *horizontalLayout_5;
+//  QGroupBox *gbNetworkParams;
+//  QVBoxLayout *verticalLayout_4;
+//  QHBoxLayout *horizontalLayout_2;
+//  QLabel *lblIp;
+//  QLineEdit *editIp;
+//  QHBoxLayout *horizontalLayout_3;
+//  QLabel *lblPort;
+//  QSpinBox *spinPort;
+//  QPushButton *bnStartStop;
+//  QGroupBox *gbSpinDirection;
+//  QVBoxLayout *verticalLayout_2;
+//  QRadioButton *rbClockwise;
+//  QRadioButton *rbContraClockwise;
+//  QGroupBox *gbSpinSpeed;
+//  QVBoxLayout *verticalLayout_3;
+//  QSlider *sliderSpinSpeed;
+//  QGroupBox *gbTurnAngle;
+//  QVBoxLayout *verticalLayout_5;
+//  QSpinBox *spinTurnAngle;
+//  QGroupBox *gbTurnCount;
+//  QVBoxLayout *verticalLayout_6;
+//  QSpinBox *spinTurnCount;
+//  QGroupBox *gbTemperature;
+//  QVBoxLayout *verticalLayout_9;
+//  QSpinBox *spinTemperaturePeriod;
+//  QHBoxLayout *horizontalLayout_4;
+//  QLabel *lblVoltage;
+//  QSpinBox *spinVoltage;
+//  QHBoxLayout *horizontalLayout;
+//  QPushButton *bnSendCmd;
+//  QLineEdit *editCmd;
+//  QSpacerItem *horizontalSpacer;
+//  QPushButton *bnApply;
+//  QTextEdit *textLog;
   
 public slots:
   bool start();
   bool stop();
   
 private slots:
-  void on_bnStartStop_clicked(bool checked);
+  void on_bnStart_clicked();
+  void on_bnStop_clicked();
   void on_rbClockwise_clicked(bool checked);
   void on_rbContraClockwise_clicked(bool checked);
-  void on_sliderSpinSpeed_valueChanged(int value);
-  void on_gbTurnAngle_clicked(bool checked);
+  void on_sliderEnginePw_valueChanged(int value);
+//  void on_gbTurnAngle_clicked(bool checked);
   void on_spinTurnAngle_valueChanged(int arg1);
   void on_gbTurnCount_clicked(bool checked);
   void on_spinTurnCount_valueChanged(int arg1);
@@ -148,9 +164,15 @@ private slots:
   void on_editIp_textChanged(const QString &arg1);
   void on_spinPort_valueChanged(int arg1);
   
+  void stateChanged(bool started);
+  
+  void on_editCmd_editingFinished();
+  
+  void on_gbTurnAngle_toggled(bool arg1);
+  
 signals:
-  void started();
-  void stopped();
+  void newState(bool started);
+//  void stopped();
   void temperature(qreal t);
   
 public slots:

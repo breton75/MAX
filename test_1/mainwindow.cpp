@@ -51,17 +51,17 @@ MainWindow::MainWindow(QWidget *parent) :
   ardp.ip = AppParams::readParam(this, "Arduino", "ip", "192.168.44.44").toString();
   ardp.port = AppParams::readParam(this, "Arduino", "port", 35580).toInt();
   ardp.spin_clockwise = AppParams::readParam(this, "Arduino", "spin_clockwise", true).toBool();
-  ardp.spin_speed = AppParams::readParam(this, "Arduino", "spin_speed", 100).toInt();
+  ardp.engine_pw = AppParams::readParam(this, "Arduino", "engine_pw", 100).toInt();
   ardp.temperature_period = AppParams::readParam(this, "Arduino", "temperature_period", 1).toInt();
   ardp.temperature_period_enable = AppParams::readParam(this, "Arduino", "temperature_period_enable", true).toBool();
   ardp.turn_angle = AppParams::readParam(this, "Arduino", "turn_angle", 180).toInt();
   ardp.turn_angle_enable = AppParams::readParam(this, "Arduino", "turn_angle_enable", false).toBool();
   ardp.turn_count = AppParams::readParam(this, "Arduino", "turn_count", 1).toInt();
   ardp.turn_count_enable = AppParams::readParam(this, "Arduino", "turn_count_enable", false).toBool();
-  ardp.voltage = AppParams::readParam(this, "Arduino", "voltage", 12).toInt();
+  ardp.current_voltage = AppParams::readParam(this, "Arduino", "current_voltage", 12).toInt();
 //  ardp. = AppParams::readParam(this, "Arduino", "", );
   
-  arduino = new svarduinomax::SvArduinoWidget(log, ardp, 0);
+  arduino = new svarduinomax::SvArduinoWidget(ardp, ui->textLog, 0);
   ui->verticalLayout_9->addWidget(arduino);
   
   /* параметры главного окна */
@@ -106,7 +106,7 @@ MainWindow::MainWindow(QWidget *parent) :
   foreach (svgraph::GraphIDs key, svgraph::GraphTypes.keys())
     _calcs.insert(key, 0);
 
-  
+  connect(this, SIGNAL(newState(bool)), this, SLOT(stateChanged(bool)));
   
   
 }
@@ -158,14 +158,14 @@ MainWindow::~MainWindow()
   AppParams::saveParam(this, "Arduino", "ip", arduino->params().ip);
   AppParams::saveParam(this, "Arduino", "port", arduino->params().port);
   AppParams::saveParam(this, "Arduino", "spin_clockwise", arduino->params().spin_clockwise);
-  AppParams::saveParam(this, "Arduino", "spin_speed", arduino->params().spin_speed);
+  AppParams::saveParam(this, "Arduino", "engine_pw", arduino->params().engine_pw);
   AppParams::saveParam(this, "Arduino", "temperature_period", arduino->params().temperature_period);
   AppParams::saveParam(this, "Arduino", "temperature_period_enable", arduino->params().temperature_period_enable);
   AppParams::saveParam(this, "Arduino", "turn_angle", arduino->params().turn_angle);
   AppParams::saveParam(this, "Arduino", "turn_angle_enable", arduino->params().turn_angle_enable);
   AppParams::saveParam(this, "Arduino", "turn_count", arduino->params().turn_count);
   AppParams::saveParam(this, "Arduino", "turn_count_enable", arduino->params().turn_count_enable);
-  AppParams::saveParam(this, "Arduino", "voltage", arduino->params().voltage);
+  AppParams::saveParam(this, "Arduino", "current_voltage", arduino->params().current_voltage);
   
   
   delete ui;
@@ -254,18 +254,20 @@ void MainWindow::on_bnCycle_clicked()
     return;
   }
   
-  /** синхронизация с Arduino **/
-  if(ui->gbSynchronizeArduino->isChecked()) {
-    
-    if(!arduino->start())
-      return;
-    
-  }
-  
   ui->bnCycle->setEnabled(false);
   ui->bnOneShot->setEnabled(false);
   ui->frame->setEnabled(false);
   QApplication::processEvents();
+  
+  /** синхронизация с Arduino **/
+  if(ui->gbSynchronizeArduino->isChecked()) {
+    
+    if(!arduino->start()) {
+      emit newState(false);
+      return;
+    }
+  }
+  
   
   if(!_thr)
   {
@@ -276,22 +278,20 @@ void MainWindow::on_bnCycle_clicked()
       
     if (!handle)
     {
-      QMessageBox::critical(0, "Error", "Device could not be open or found", QMessageBox::Ok);
+      emit newState(false);
       libusb_exit(NULL);
+      log << svlog::Time << svlog::Critical << "Device could not be open or found" << svlog::endl;
+      return;
     }
      
     libusb_claim_interface(handle, 0);  // запрашиваем интерфейс 0 для себя
-    
-    ui->bnCycle->setText("Stop");
-    ui->bnCycle->setEnabled(true);
-    ui->bnCycle->setStyleSheet("background-color: tomato");
-    
-    ui->bnSaveToFile->setEnabled(true);
     
     
     _thr = new SvPullUsb(handle, ui->spinTimer->value());
     connect(_thr, SIGNAL(new_data(pullusb::fres*/*, pullusb::MAX35101EV_ANSWER**/)), this, SLOT(new_data(pullusb::fres*/*, pullusb::MAX35101EV_ANSWER**/)));
     _thr->start();
+    
+    emit newState(true);    
 
   }
   else
@@ -306,17 +306,33 @@ void MainWindow::on_bnCycle_clicked()
       libusb_release_interface(handle, 0); // отпускаем интерфейс 0
       libusb_close(handle);  // закрываем устройство
       libusb_exit(NULL);  // завершаем работу с библиотекой  
-      
-      ui->bnCycle->setText("Start");
-      ui->bnCycle->setEnabled(true);
-      ui->bnCycle->setStyleSheet("");
-      ui->bnOneShot->setEnabled(true);
-      ui->frame->setEnabled(true);
-      
-      on_bnSaveToFile_clicked(false);
-      ui->bnSaveToFile->setEnabled(false);
+
+      emit newState(false);      
+
   }
- 
+}
+
+void MainWindow::stateChanged(bool state)
+{
+  if(state) {
+    ui->bnCycle->setText("Стоп");
+    ui->bnCycle->setStyleSheet("background-color: tomato");
+   
+  }
+  else {
+   
+    ui->bnCycle->setText("Старт");
+    ui->bnCycle->setStyleSheet("");
+    
+    on_bnSaveToFile_clicked(false);
+  }
+  
+  ui->frame->setEnabled(state);
+  ui->bnOneShot->setEnabled(!state);
+  ui->bnSaveToFile->setEnabled(state);
+  ui->bnCycle->setEnabled(true);
+  QApplication::processEvents();
+  
 }
 
 void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *max_data*/)

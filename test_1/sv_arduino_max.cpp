@@ -1,38 +1,40 @@
 #include "sv_arduino_max.h"
-//#include "ui_engine_control.h"
+#include "ui_engine_control.h"
 
-svarduinomax::SvArduinoWidget::SvArduinoWidget(svlog::SvLog &log,
-                                               SvArduinoWidgetParams params,
+svarduinomax::SvArduinoWidget::SvArduinoWidget(SvArduinoWidgetParams params,
+                                               QTextEdit *logWidget,
                                                QWidget *parent) : 
-  QWidget(parent)
+  QWidget(parent),
+  ui(new Ui::SvArduinoWidgetUi)
 {
   _params = params;
   
-  setupUi();
+  ui->setupUi(this);
+
+  ui->editCmd->setVisible(false);
   
-  _log = svlog::SvLog(textLog, this);
-  editIp->setText(_params.ip);
-  spinPort->setValue(_params.port);
-  rbClockwise->setChecked(_params.spin_clockwise);
-  rbContraClockwise->setChecked(!_params.spin_clockwise);
-  sliderSpinSpeed->setValue(_params.spin_speed);
-  gbTurnAngle->setChecked(_params.turn_angle_enable);
-  spinTurnAngle->setValue(_params.turn_angle);
-  gbTurnCount->setChecked(_params.turn_count_enable);
-  spinTurnCount->setValue(_params.turn_count);
-  gbTemperature->setChecked(_params.temperature_period_enable);
-  spinTemperaturePeriod->setValue(_params.temperature_period);
-  spinVoltage->setValue(_params.voltage);
+  _log = svlog::SvLog(logWidget, this);
   
+  ui->editIp->setText(_params.ip);
+  ui->spinPort->setValue(_params.port);
+  ui->rbClockwise->setChecked(_params.spin_clockwise);
+  ui->rbContraClockwise->setChecked(!_params.spin_clockwise);
+  ui->sliderEnginePw->setValue(_params.engine_pw);
+  ui->gbTurnAngle->setChecked(_params.turn_angle_enable);
+  ui->spinTurnAngle->setValue(_params.turn_angle);
+  ui->gbTurnCount->setChecked(_params.turn_count_enable);
+  ui->spinTurnCount->setValue(_params.turn_count);
+  ui->gbTemperature->setChecked(_params.temperature_period_enable);
+  ui->spinTemperaturePeriod->setValue(_params.temperature_period);
+  ui->spinVoltage->setValue(_params.current_voltage);
   
-  _log << "opopo";
-  _client = new svtcp::SvTcpClient(_log, _params.ip, _params.port);
+  _client = new svtcp::SvTcpClient(_params.ip, _params.port, logWidget, svtcp::LogInData | svtcp::LogOutData, parent);
   
-//  connect()
+  connect(this, SIGNAL(newState(bool)), this, SLOT(stateChanged(bool)));
   
 }
 
-void svarduinomax::SvArduinoWidget::setupUi()
+/* void svarduinomax::SvArduinoWidget::setupUi()
 {
     verticalLayout_7 = new QVBoxLayout(this);
     verticalLayout_7->setObjectName(QStringLiteral("verticalLayout_7"));
@@ -100,7 +102,7 @@ void svarduinomax::SvArduinoWidget::setupUi()
     sizePolicy1.setVerticalStretch(0);
     sizePolicy1.setHeightForWidth(bnStartStop->sizePolicy().hasHeightForWidth());
     bnStartStop->setSizePolicy(sizePolicy1);
-    bnStartStop->setCheckable(true);
+//    bnStartStop->setCheckable(true);
    
     horizontalLayout_5->addWidget(bnStartStop);
 
@@ -288,82 +290,99 @@ void svarduinomax::SvArduinoWidget::setupUi()
 // retranslateUi
 
 }
+*/
 
-void svarduinomax::SvArduinoWidget::on_bnStartStop_clicked(bool checked)
+void svarduinomax::SvArduinoWidget::on_bnStart_clicked()
 {
-  if(checked)
+  if(!_started) 
     start();
-  
-  else 
-    stop();    
+}
 
+void svarduinomax::SvArduinoWidget::on_bnStop_clicked()
+{
+    stop();    
 }
 
 bool svarduinomax::SvArduinoWidget::start()
 {
-  _client->setIp(_params.ip);
-  _client->setPort(_params.port);  
+  foreach (QWidget* wdg, this->findChildren<QWidget *>())
+    wdg->setEnabled(false);
+
+//  ui->bnStart->setEnabled(false);
+//  ui->bnStop->setEnabled(false);
   
-  /** угол поворота **/
-  if(_client->connectToHost() != svtcp::SOCKET_OK) {
-    _log << svlog::Time << svlog::Critical << _client->lastError() << svlog::endl;
+  QApplication::processEvents();
+  
+  try {
+  
+    _client->setIp(_params.ip);
+    _client->setPort(_params.port);  
+    
+    /** угол поворота **/
+    if(_client->connectToHost() != svtcp::SOCKET_OK) _exception.raise(_client->lastError());
+    _client->sendData(QString("SET:TURN:ANGLE:%1").arg(_params.turn_angle_enable ? QString::number(_params.turn_angle) : "OFF"));
+    _client->disconnectFromHost();
+    
+    /** количество оборотов **/
+    if(_client->connectToHost() != svtcp::SOCKET_OK) _exception.raise(_client->lastError());  
+    _client->sendData(QString("SET:TURN:COUNT:%1").arg(_params.turn_count_enable ? QString::number(_params.turn_count) : "OFF"));
+    _client->disconnectFromHost();
+    
+    /** мощность двигателя **/
+    if(_client->connectToHost() != svtcp::SOCKET_OK) _exception.raise(_client->lastError());    
+    _client->sendData(QString("SET:ENGINE:PW:%1").arg(int(255 * _params.engine_pw/100)));
+    _client->disconnectFromHost();
+    
+    /** направление вращения **/
+    if(_client->connectToHost() != svtcp::SOCKET_OK) _exception.raise(_client->lastError());    
+    _client->sendData(QString("SET:DIRECTION:%1").arg(_params.spin_clockwise ? "CLOCKWISE" : "ANTICLOCKWISE"));
+    _client->disconnectFromHost();
+    
+    if(_client->connectToHost() != svtcp::SOCKET_OK) _exception.raise(_client->lastError());
+    _client->sendData(QString("START"));
+    _client->disconnectFromHost();
+    
+    emit newState(true);
+    return true;
+    
+  }
+  
+  catch (SvException &e) {
+    _log << svlog::Time << svlog::Critical << e.err << svlog::endl;
+    emit newState(false);    
     return false;
   }
-  _client->sendData(QString("SET:TURN:ANGLE:%1").arg(gbTurnAngle->isChecked() ? QString::number(spinTurnAngle->value()) : "OFF"));
-  _client->disconnectFromHost();
-  
-  /** количество оборотов **/
-  if(_client->connectToHost() != svtcp::SOCKET_OK) {
-    _log << svlog::Time << svlog::Critical << _client->lastError() << svlog::endl;
-    return false;
-  }
-  qDebug() << 3;
-  _client->sendData(QString("SET:TURN:COUNT:%1").arg(gbTurnCount->isChecked() ? QString::number(spinTurnCount->value()) : "OFF"));
-  qDebug() << _log.currentLine();
-  _client->disconnectFromHost();
-  
-  
-  /** мощность двигателя **/
-  if(_client->connectToHost() != svtcp::SOCKET_OK) {
-    _log << svlog::Time << svlog::Critical << _client->lastError() << svlog::endl;
-    return false;
-  }
-  qDebug() << 4;
-  _client->sendData(QString("SET:ENGINE:PW:%1").arg(255 * int(sliderSpinSpeed->value()/100)));
-  _client->disconnectFromHost();
-  
-  _client->connectToHost();
-  _client->sendData(QString("START"));
-  _client->disconnectFromHost();
-  
-  bnStartStop->setText("Стоп");
-  bnStartStop->setStyleSheet("background-color: tomato");
-//  QApplication::processEvents();
-  
-  emit started();
-  return true;
   
 }
 
 bool svarduinomax::SvArduinoWidget::stop()
 {
-  if(_client->connectToHost() != svtcp::SOCKET_OK) {
-    _log << svlog::Time << svlog::Critical << _client->lastError() << svlog::endl;
-    return false;
+  foreach (QWidget* wdg, this->findChildren<QWidget *>())
+    wdg->setEnabled(false);
+  
+  if(_client->connectToHost() == svtcp::SOCKET_OK) {
+    _client->sendData(QString("STOP"));
+    _client->disconnectFromHost();
   }
+  else
+    _log << svlog::Time << svlog::Critical << _client->lastError() << svlog::endl;
   
-  _client->sendData(QString("STOP"));
-  _client->disconnectFromHost();
+  emit newState(false);
   
-  bnStartStop->setText("Старт");
-  bnStartStop->setStyleSheet("");
-//  QApplication::processEvents();
-  
-  emit stopped();
   return true;
+  
 }
 
-
+void svarduinomax::SvArduinoWidget::stateChanged(bool started)
+{
+  _started = started;
+  
+  foreach (QWidget* wdg, this->findChildren<QWidget *>())
+    wdg->setEnabled(true);
+  
+  ui->bnStart->setEnabled(!started);
+    
+}
 
 void svarduinomax::SvArduinoWidget::on_rbClockwise_clicked(bool checked)
 {
@@ -375,19 +394,19 @@ void svarduinomax::SvArduinoWidget::on_rbContraClockwise_clicked(bool checked)
     _params.spin_clockwise = false;
 }
 
-void svarduinomax::SvArduinoWidget::on_sliderSpinSpeed_valueChanged(int value)
+void svarduinomax::SvArduinoWidget::on_sliderEnginePw_valueChanged(int value)
 {
-    _params.spin_speed = value;
+    _params.engine_pw = value;
 }
 
-void svarduinomax::SvArduinoWidget::on_gbTurnAngle_clicked(bool checked)
+void svarduinomax::SvArduinoWidget::on_gbTurnAngle_toggled(bool arg1)
 {
-    _params.turn_angle_enable = checked;
+  _params.turn_angle_enable = arg1;
 }
 
 void svarduinomax::SvArduinoWidget::on_spinTurnAngle_valueChanged(int arg1)
 {
-    _params.turn_angle = spinTurnAngle->value();
+    _params.turn_angle = arg1;
 }
 
 void svarduinomax::SvArduinoWidget::on_gbTurnCount_clicked(bool checked)
@@ -397,7 +416,7 @@ void svarduinomax::SvArduinoWidget::on_gbTurnCount_clicked(bool checked)
 
 void svarduinomax::SvArduinoWidget::on_spinTurnCount_valueChanged(int arg1)
 {
-    _params.turn_count = spinTurnCount->value();
+    _params.turn_count = arg1;
 }
 
 void svarduinomax::SvArduinoWidget::on_gbTemperature_clicked(bool checked)
@@ -407,12 +426,13 @@ void svarduinomax::SvArduinoWidget::on_gbTemperature_clicked(bool checked)
 
 void svarduinomax::SvArduinoWidget::on_spinTemperaturePeriod_valueChanged(int arg1)
 {
-    _params.temperature_period = spinTemperaturePeriod->value();
+    _params.temperature_period = arg1;
 }
 
 void svarduinomax::SvArduinoWidget::on_bnSendCmd_clicked()
 {
-  on_editCmd_returnPressed();
+  ui->editCmd->setVisible(true);
+  ui->bnSendCmd->setVisible(false);
 }
 
 void svarduinomax::SvArduinoWidget::on_editCmd_returnPressed()
@@ -422,7 +442,7 @@ void svarduinomax::SvArduinoWidget::on_editCmd_returnPressed()
   
   _client->connectToHost();
   if(!_client->connected()) return;
-  _client->sendData(editCmd->text());
+  _client->sendData(ui->editCmd->text());
   _client->disconnectFromHost();
 }
 
@@ -433,10 +453,18 @@ void svarduinomax::SvArduinoWidget::on_bnApply_clicked()
 
 void svarduinomax::SvArduinoWidget::on_editIp_textChanged(const QString &arg1)
 {
-    _params.ip = editIp->text();
+    _params.ip = ui->editIp->text();
+    qDebug() << _params.ip;
 }
 
 void svarduinomax::SvArduinoWidget::on_spinPort_valueChanged(int arg1)
 {
-    _params.port = spinPort->value();
+    _params.port = arg1;
 }
+
+void svarduinomax::SvArduinoWidget::on_editCmd_editingFinished()
+{
+  ui->editCmd->setVisible(false);
+  ui->bnSendCmd->setVisible(true);
+}
+

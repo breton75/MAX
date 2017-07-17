@@ -101,6 +101,8 @@ private slots:
   void on_listGraphs_currentRowChanged(int currentRow);
   void on_listGraphs_doubleClicked(const QModelIndex &index);
   
+  void stateChanged(bool state);
+  
 private:
   Ui::MainWindow *ui;
   
@@ -129,6 +131,9 @@ private:
   svarduinomax::SvArduinoWidget *arduino;
   
   svtcp::SvTcpClient *_client;
+  
+signals:
+  newState(bool state);
   
 };
 
