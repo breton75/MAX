@@ -52,8 +52,8 @@ MainWindow::MainWindow(QWidget *parent) :
   ardp.port = AppParams::readParam(this, "Arduino", "port", 35580).toInt();
   ardp.spin_clockwise = AppParams::readParam(this, "Arduino", "spin_clockwise", true).toBool();
   ardp.engine_pw = AppParams::readParam(this, "Arduino", "engine_pw", 100).toInt();
-  ardp.temperature_period = AppParams::readParam(this, "Arduino", "temperature_period", 1).toInt();
-  ardp.temperature_period_enable = AppParams::readParam(this, "Arduino", "temperature_period_enable", true).toBool();
+  ardp.state_period = AppParams::readParam(this, "Arduino", "state_period", 1).toInt();
+  ardp.state_period_enable = AppParams::readParam(this, "Arduino", "state_period_enable", true).toBool();
   ardp.turn_angle = AppParams::readParam(this, "Arduino", "turn_angle", 180).toInt();
   ardp.turn_angle_enable = AppParams::readParam(this, "Arduino", "turn_angle_enable", false).toBool();
   ardp.turn_count = AppParams::readParam(this, "Arduino", "turn_count", 1).toInt();
@@ -159,8 +159,8 @@ MainWindow::~MainWindow()
   AppParams::saveParam(this, "Arduino", "port", arduino->params().port);
   AppParams::saveParam(this, "Arduino", "spin_clockwise", arduino->params().spin_clockwise);
   AppParams::saveParam(this, "Arduino", "engine_pw", arduino->params().engine_pw);
-  AppParams::saveParam(this, "Arduino", "temperature_period", arduino->params().temperature_period);
-  AppParams::saveParam(this, "Arduino", "temperature_period_enable", arduino->params().temperature_period_enable);
+  AppParams::saveParam(this, "Arduino", "state_period", arduino->params().state_period);
+  AppParams::saveParam(this, "Arduino", "state_period_enable", arduino->params().state_period_enable);
   AppParams::saveParam(this, "Arduino", "turn_angle", arduino->params().turn_angle);
   AppParams::saveParam(this, "Arduino", "turn_angle_enable", arduino->params().turn_angle_enable);
   AppParams::saveParam(this, "Arduino", "turn_count", arduino->params().turn_count);

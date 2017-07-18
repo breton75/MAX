@@ -5,24 +5,25 @@
 #include <QTimer>
 #include <QDebug>
 #include <QException>
+#include <QStringList>
 
-#include <QtCore/QVariant>
-#include <QtWidgets/QAction>
-#include <QtWidgets/QApplication>
-#include <QtWidgets/QButtonGroup>
-#include <QtWidgets/QGroupBox>
-#include <QtWidgets/QHBoxLayout>
-#include <QtWidgets/QHeaderView>
-#include <QtWidgets/QLabel>
-#include <QtWidgets/QLineEdit>
-#include <QtWidgets/QPushButton>
-#include <QtWidgets/QRadioButton>
-#include <QtWidgets/QSlider>
-#include <QtWidgets/QSpacerItem>
-#include <QtWidgets/QSpinBox>
-#include <QtWidgets/QTextEdit>
-#include <QtWidgets/QVBoxLayout>
-#include <QtWidgets/QWidget>
+//#include <QtCore/QVariant>
+//#include <QtWidgets/QAction>
+//#include <QtWidgets/QApplication>
+//#include <QtWidgets/QButtonGroup>
+//#include <QtWidgets/QGroupBox>
+//#include <QtWidgets/QHBoxLayout>
+//#include <QtWidgets/QHeaderView>
+//#include <QtWidgets/QLabel>
+//#include <QtWidgets/QLineEdit>
+//#include <QtWidgets/QPushButton>
+//#include <QtWidgets/QRadioButton>
+//#include <QtWidgets/QSlider>
+//#include <QtWidgets/QSpacerItem>
+//#include <QtWidgets/QSpinBox>
+//#include <QtWidgets/QTextEdit>
+//#include <QtWidgets/QVBoxLayout>
+//#include <QtWidgets/QWidget>
 
 namespace Ui {
 class SvArduinoWidgetUi;
@@ -43,8 +44,8 @@ namespace svarduinomax {
     bool turn_count_enable = false;
     quint32 turn_count = 1;
     qreal current_voltage = 12;
-    bool temperature_period_enable = true;
-    quint32 temperature_period = 1;
+    bool state_period_enable = true;
+    quint32 state_period = 60;
   };
   
   class SvArduinoWidget;
@@ -69,10 +70,9 @@ public:
                            QTextEdit *logWidget = nullptr,
                            QWidget *parent = nullptr);
   
-  void setLog(svlog::SvLog &log) { _log = log; }
-  
-  qreal currentTemperature() { return _temperature; }
-  quint32 currentTurnCount() { return _turn_count; }
+  qreal currentTemperature() { return _current_temperature; }
+  quint32 currentAngle() { return _current_angle; }
+  quint32 currentTurn() { return _current_turn; }
   
   svarduinomax::SvArduinoWidgetParams params() { return _params; }
   void setParams(svarduinomax::SvArduinoWidgetParams params) { _params = params; }
@@ -83,64 +83,25 @@ private:
   svlog::SvLog _log;
   svtcp::SvTcpClient *_client;
   
-  QString _ip;
-  quint32 _port;
-  bool _spin_clockwise;
-  quint32 _spin_speed;
-  quint32 _turn_angle;
-  quint32 _turn_count;
-  qreal _temperature;  
-  qreal _voltage;
+//  QString _ip;
+//  quint32 _port;
+//  bool _spin_clockwise;
+//  quint32 _spin_speed;
+//  qreal _voltage;
+
+  qreal _current_temperature;  
+  quint32 _current_angle;
+  quint32 _current_turn;
   
   bool _started = false;
   
-  QTimer _temperature_timer;
+  QTimer *_state_timer;
   
   svarduinomax::SvArduinoWidgetParams _params;
   
   SvException _exception;
-  
-  /** контролы **/
-//  void setupUi();
-  
-//  QVBoxLayout *verticalLayout_7;
-//  QGroupBox *gbMain;
-//  QVBoxLayout *verticalLayout;
-//  QHBoxLayout *horizontalLayout_5;
-//  QGroupBox *gbNetworkParams;
-//  QVBoxLayout *verticalLayout_4;
-//  QHBoxLayout *horizontalLayout_2;
-//  QLabel *lblIp;
-//  QLineEdit *editIp;
-//  QHBoxLayout *horizontalLayout_3;
-//  QLabel *lblPort;
-//  QSpinBox *spinPort;
-//  QPushButton *bnStartStop;
-//  QGroupBox *gbSpinDirection;
-//  QVBoxLayout *verticalLayout_2;
-//  QRadioButton *rbClockwise;
-//  QRadioButton *rbContraClockwise;
-//  QGroupBox *gbSpinSpeed;
-//  QVBoxLayout *verticalLayout_3;
-//  QSlider *sliderSpinSpeed;
-//  QGroupBox *gbTurnAngle;
-//  QVBoxLayout *verticalLayout_5;
-//  QSpinBox *spinTurnAngle;
-//  QGroupBox *gbTurnCount;
-//  QVBoxLayout *verticalLayout_6;
-//  QSpinBox *spinTurnCount;
-//  QGroupBox *gbTemperature;
-//  QVBoxLayout *verticalLayout_9;
-//  QSpinBox *spinTemperaturePeriod;
-//  QHBoxLayout *horizontalLayout_4;
-//  QLabel *lblVoltage;
-//  QSpinBox *spinVoltage;
-//  QHBoxLayout *horizontalLayout;
-//  QPushButton *bnSendCmd;
-//  QLineEdit *editCmd;
-//  QSpacerItem *horizontalSpacer;
-//  QPushButton *bnApply;
-//  QTextEdit *textLog;
+
+//  QTimer _timer;
   
 public slots:
   bool start();
@@ -156,19 +117,18 @@ private slots:
   void on_spinTurnAngle_valueChanged(int arg1);
   void on_gbTurnCount_clicked(bool checked);
   void on_spinTurnCount_valueChanged(int arg1);
-  void on_gbTemperature_clicked(bool checked);
-  void on_spinTemperaturePeriod_valueChanged(int arg1);
+  void on_gbState_clicked(bool checked);
+  void on_spinStatePeriod_valueChanged(int arg1);
   void on_bnSendCmd_clicked();
   void on_editCmd_returnPressed();
   void on_bnApply_clicked();
   void on_editIp_textChanged(const QString &arg1);
   void on_spinPort_valueChanged(int arg1);
-  
   void stateChanged(bool started);
-  
   void on_editCmd_editingFinished();
-  
   void on_gbTurnAngle_toggled(bool arg1);
+  
+  void pullSensors();
   
 signals:
   void newState(bool started);
