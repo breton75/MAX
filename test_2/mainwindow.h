@@ -83,7 +83,6 @@ public:
   ~MainWindow();
   
 //  libusb_device_handle* handle;
-  QSerialPort *handle = nullptr;
 //  QTimer tm;
   
   svlog::SvLog log;
@@ -110,6 +109,7 @@ private slots:
 private:
   Ui::MainWindow *ui;
   
+  QSerialPort *_serial = nullptr;
 //  QMap<int, QPair<uint16_t, uint16_t>> _devices;
   QList<QSerialPortInfo> _devices;
   
@@ -117,7 +117,7 @@ private:
   int _timerId;
   
 //  pullusb::MAX35101EV_ANSWER _max_data;
-  pullusb::TDC1000_ANSWER _max_data;
+  TDC1000::TDC1000_ANSWER _tdc1000_data;
   
   QMap<svgraph::GraphIDs, qreal> _calcs;
   
@@ -176,7 +176,7 @@ private:
   bool _started;
   bool _finished;
   quint32 _timeout;
-  QSerialPort* _handle;
+  QSerialPort* _serial;
   
 signals:
   void new_data(pullusb::fres *result);

@@ -185,69 +185,30 @@ void MainWindow::on_bnGetDeviceList_clicked()
 void MainWindow::on_bnOneShot_clicked()
 {
   
-  handle = new QSerialPort(_devices.at(ui->cbDevices->currentIndex()));
+  _serial = new QSerialPort(_devices.at(ui->cbDevices->currentIndex()));
   
-  if (!handle)
+  if (!_serial)
   {
     log << svlog::Time << svlog::Critical << "Ошибка при создании объекта." 
-        << handle->errorString() << svlog::endl;;
+        << _serial->errorString() << svlog::endl;;
     return;
   }
   
-  if(!handle->open(QIODevice::ReadWrite)) {
+  if(!_serial->open(QIODevice::ReadWrite)) {
     log << svlog::Time << svlog::Critical
         << QString("Не удалось открыть порт %1").arg(_devices.at(ui->cbDevices->currentIndex()).portName())
         << svlog::endl;
     return;
   }
   
-  QByteArray request = QByteArray::fromHex("30353030303030303030303030303030"
-                                     "30303030303030303030303030303030");
-  handle->write(request);
+  TDC1000::qres res = TDC1000::pullTDC1000(_serial);
   
-  if(!handle->waitForBytesWritten(1000)) {
-    log << svlog::Time << svlog::Critical << "Не удалось записать данные порт." 
-        << handle->errorString() << svlog::endl;
-    return;
-  }
-  
-  /** первый пакет ответа **/
-  if(!handle->waitForReadyRead(1000)) {
-    log << svlog::Time << svlog::Critical << "Таймаут. Ответ не получен." << svlog::endl;
-    return;
-  }
-  
-  QByteArray answer = QByteArray();
-  answer = handle->readAll();
-  
-  if(answer.size() != request.size()) {
-    log << svlog::Time << svlog::Critical 
-        << QString("Неверный ответ. Получено %1 байт. Ожидалось %2.").arg(answer.size()).arg(request.size())
-        << svlog::endl;
-    return;
-  }
-  
-  /** второй пакет ответа **/
-  if(!handle->waitForReadyRead(1000)) {
-    log << svlog::Time << svlog::Critical << "Таймаут. Ответ не получен." << svlog::endl;
-    return;
-  }
-  
-  answer.clear();
-  answer = handle->readAll();
-  
-  if(answer.size() != sizeof(pullusb::TDC1000_ANSWER)) {
-    log << svlog::Time << svlog::Critical 
-        << QString("Неверный ответ. Получено %1 байт. Ожидалось %2.").arg(answer.size()).arg(sizeof(pullusb::TDC1000_ANSWER))
-        << svlog::endl;
-    return;
-  }
-  
-  emit new_data(answer);
+  if(res.result)
+    emit new_data(answer);
 
-  handle->close();
-  delete handle;
-  handle = nullptr;
+  _serial->close();
+  delete _serial;
+  _serial = nullptr;
   
 }
 
@@ -342,11 +303,11 @@ void MainWindow::new_data(QByteArray &data)
 {
   MUTEX1.lock();
 
-  memcpy(&_max_data, data.data(), sizeof(pullusb::TDC1000_ANSWER)); // pullusb::MAX35101EV_ANSWER));
+  memcpy(&_tdc1000_data, data.data(), sizeof(TDC1000::TDC1000_ANSWER));
   
   /** ******************************* **/
-  qreal t1 = qFromBigEndian<qint16>(_max_data.time1); // / 262.14;   // время пролета 1, в нс.
-  qreal t2 = qFromBigEndian<qint16>(_max_data.time2); // / 262.14; // время пролета 2, в нс.
+  qreal t1 = qFromBigEndian<qint16>(_tdc1000_data.time1); // / 262.14;   // время пролета 1, в нс.
+  qreal t2 = qFromBigEndian<qint16>(_tdc1000_data.time2); // / 262.14; // время пролета 2, в нс.
   
   qreal L = 0.0895; // расстояние между излучателями в метрах
 
@@ -397,11 +358,11 @@ void SvPullSerial::run()
   while(_started)
   {
     MUTEX1.lock();
-//    pullusb::fres *result = pullusb::request_texas(_handle);
+    TDC1000::qres result = TDC1000::pullTDC1000(_serial);
     MUTEX1.unlock();
     
-//    if(result)
-//      emit new_data(result); 
+    if(result)
+      emit new_data(result.answer); 
     
     msleep(_timeout);
     
