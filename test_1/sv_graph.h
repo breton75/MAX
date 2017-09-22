@@ -19,7 +19,9 @@ namespace svgraph {
     giTOFdiff,
     gitAvg,
     giVsnd,
-    giTemperature
+    giTemperature,
+    giTurnByMinute,
+    giAngleBySecond
   };
 
   /* режимы отображения */
@@ -27,7 +29,9 @@ namespace svgraph {
                {giTOFdiff, "TOF diff нс."},
                {gitAvg, "(t1 + t2) / 2"},
                {giVsnd, "Скорость звука (м/с)."},
-               {giTemperature, "Температура"}};
+               {giTemperature, "Температура"},
+               {giTurnByMinute, "Скорость вращения (об./мин.)"},
+               {giAngleBySecond, "Скорость вращения (угол/сек.)"}};
 
   
   struct GraphParams {

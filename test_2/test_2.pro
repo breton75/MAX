@@ -30,7 +30,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    pull_usb.cpp \
     sv_chartwidget.cpp \
     sv_graph.cpp \
     sv_arduino_max.cpp \
@@ -39,12 +38,11 @@ SOURCES += main.cpp\
     ../../svlib/sv_tcpserverclient.cpp \
     ../../svlib/sv_settings.cpp \
     ../qcustomplot.cpp \
-    sv_tdc100thread.cpp
+    sv_tdc100.cpp
 
 
 HEADERS  += mainwindow.h \
     ../../libusb-1.0.21/include/libusb-1.0/libusb.h \
-    pull_usb.h \
     sv_chartwidget.h \
     sv_graph.h \
     sv_arduino_max.h \
@@ -54,7 +52,7 @@ HEADERS  += mainwindow.h \
     ../../svlib/sv_fnt.h \
     ../../svlib/sv_settings.h \
     ../qcustomplot.h \
-    sv_tdc100thread.h
+    sv_tdc100.h
 
 FORMS    += mainwindow.ui \
     sv_graphparamsdialog.ui \

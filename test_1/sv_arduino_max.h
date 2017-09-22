@@ -6,6 +6,7 @@
 #include <QDebug>
 #include <QException>
 #include <QStringList>
+#include "time.h"
 
 //#include <QtCore/QVariant>
 //#include <QtWidgets/QAction>
@@ -73,6 +74,8 @@ public:
   qreal currentTemperature() { return _current_temperature; }
   quint32 currentAngle() { return _current_angle; }
   quint32 currentTurn() { return _current_turn; }
+  qreal currentTurnByMinute() { return _current_turn_by_minute; }
+  qreal currentAngleBySecond() { return _current_angle_by_second; }
   
   svarduinomax::SvArduinoWidgetParams params() { return _params; }
   void setParams(svarduinomax::SvArduinoWidgetParams params) { _params = params; }
@@ -91,11 +94,17 @@ private:
 
   qreal _current_temperature;  
   quint32 _current_angle;
+  quint32 _last_angle = 0;
+  qreal _current_angle_by_second = 0;
   quint32 _current_turn;
+  quint32 _last_turn = 0;
+  qreal _current_turn_by_minute = 0;
   
-  bool _started = false;
+  bool _current_state = false;
   
   QTimer *_state_timer;
+  
+  time_t _last_time;
   
   svarduinomax::SvArduinoWidgetParams _params;
   
@@ -124,7 +133,7 @@ private slots:
   void on_bnApply_clicked();
   void on_editIp_textChanged(const QString &arg1);
   void on_spinPort_valueChanged(int arg1);
-  void stateChanged(bool started);
+  void stateChanged(bool state);
   void on_editCmd_editingFinished();
   void on_gbTurnAngle_toggled(bool arg1);
   

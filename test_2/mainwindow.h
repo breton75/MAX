@@ -27,11 +27,10 @@
 QT_CHARTS_USE_NAMESPACE
 
 #include "libusb.h"
-#include "pull_usb.h"
 #include "sv_chartwidget.h"
 #include "sv_graph.h"
 #include "sv_arduino_max.h"
-#include "sv_tdc100thread.h"
+#include "sv_tdc100.h"
 
 #include "../../svlib/sv_settings.h"
 #include "../../svlib/sv_log.h"
@@ -70,7 +69,7 @@ struct GraphHeader {
 
 /** ************************ **/
 
-class SvPullUsb;
+class SvPullTDC1000;
 
 class MainWindow : public QMainWindow
 {
@@ -111,9 +110,9 @@ private:
   
   QSerialPort *_serial = nullptr;
 //  QMap<int, QPair<uint16_t, uint16_t>> _devices;
-  QList<QSerialPortInfo> _devices;
+  QList<QSerialPortInfo> _available_devices;
   
-  SvTDC1000Thread *_tdc100thr = nullptr;
+  SvPullTDC1000 *_tdc100thr = nullptr;
   int _timerId;
   
 //  pullusb::MAX35101EV_ANSWER _max_data;
@@ -144,18 +143,18 @@ signals:
 };
 
 
-class SvPullSerial: public QThread
+class SvPullTDC1000: public QThread
 {
     Q_OBJECT
   
 public:
-  explicit SvPullSerial(QSerialPort *handle, quint32 timeout)
+  explicit SvPullTDC1000(QSerialPort *serial, quint32 timeout)
   {
-    _handle = handle;
+    _serial = serial;
     _timeout = timeout;
   }
   
-  ~SvPullSerial() 
+  ~SvPullTDC1000() 
   { 
     stop(); 
     deleteLater(); 
@@ -176,10 +175,10 @@ private:
   bool _started;
   bool _finished;
   quint32 _timeout;
-  QSerialPort* _serial;
+  QSerialPort *_serial;
   
 signals:
-  void new_data(pullusb::fres *result);
+  void new_data(QByteArray data);
   
 };
 

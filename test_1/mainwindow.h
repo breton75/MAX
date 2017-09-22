@@ -34,6 +34,8 @@ QT_CHARTS_USE_NAMESPACE
 #include "../../svlib/sv_log.h"
 #include "../../svlib/sv_tcpserverclient.h"
 
+#define NO_USB_DEVICE
+
 namespace Ui {
 class MainWindow;
 }
@@ -79,7 +81,7 @@ public:
   explicit MainWindow(QWidget *parent = 0);
   ~MainWindow();
   
-  libusb_device_handle* handle;
+  libusb_device_handle* handle = nullptr;
 //  QTimer tm;
   
   svlog::SvLog log;

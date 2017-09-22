@@ -259,18 +259,20 @@ void MainWindow::on_bnCycle_clicked()
   ui->frame->setEnabled(false);
   QApplication::processEvents();
   
-  /** синхронизация с Arduino **/
-  if(ui->gbSynchronizeArduino->isChecked()) {
-    
-    if(!arduino->start()) {
-      emit newState(false);
-      return;
-    }
-  }
-  
+
   
   if(!_thr)
   {
+    /** синхронизация с Arduino **/
+    if(ui->gbSynchronizeArduino->isChecked()) {
+      
+      if(!arduino->start()) {
+        emit newState(false);
+        return;
+      }
+    }
+    
+#ifndef NO_USB_DEVICE  
     libusb_context *ctx = NULL;  
     libusb_init(NULL);  // инициализируем библиотеку
     
@@ -285,7 +287,7 @@ void MainWindow::on_bnCycle_clicked()
     }
      
     libusb_claim_interface(handle, 0);  // запрашиваем интерфейс 0 для себя
-    
+#endif
     
     _thr = new SvPullUsb(handle, ui->spinTimer->value());
     connect(_thr, SIGNAL(new_data(pullusb::fres*/*, pullusb::MAX35101EV_ANSWER**/)), this, SLOT(new_data(pullusb::fres*/*, pullusb::MAX35101EV_ANSWER**/)));
@@ -296,6 +298,11 @@ void MainWindow::on_bnCycle_clicked()
   }
   else
   {
+    /** синхронизация с Arduino **/
+    if(ui->gbSynchronizeArduino->isChecked()) {
+      arduino->stop();
+    }
+    
 //    tm.stop();
     //    _thr->killTimer(_timerId);
       _thr->stop();
@@ -303,10 +310,12 @@ void MainWindow::on_bnCycle_clicked()
       delete _thr;
       _thr = nullptr;
       
+#ifndef NO_USB_DEVICE
       libusb_release_interface(handle, 0); // отпускаем интерфейс 0
       libusb_close(handle);  // закрываем устройство
       libusb_exit(NULL);  // завершаем работу с библиотекой  
-
+#endif
+ 
       emit newState(false);      
 
   }
@@ -327,7 +336,7 @@ void MainWindow::stateChanged(bool state)
     on_bnSaveToFile_clicked(false);
   }
   
-  ui->frame->setEnabled(state);
+  ui->frame->setEnabled(!state);
   ui->bnOneShot->setEnabled(!state);
   ui->bnSaveToFile->setEnabled(state);
   ui->bnCycle->setEnabled(true);
@@ -354,6 +363,8 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
     _calcs[svgraph::giVpot] = 3 * _calcs.value(svgraph::giVsnd) * (_calcs.value(svgraph::giTOFdiff) / (t1 + t2)); // определяем скорость потока, м/с.
     _calcs[svgraph::gitAvg] = (t1 + t2) / 2;
     _calcs[svgraph::giTemperature] = arduino->currentTemperature();
+    _calcs[svgraph::giTurnByMinute] = arduino->currentTurnByMinute();
+    _calcs[svgraph::giAngleBySecond] = arduino->currentAngleBySecond();
     
     for(int i = 0; i < _chart_w->graphList().count(); i++) {
       
@@ -405,7 +416,21 @@ void SvPullUsb::run()
   while(_started)
   {
     MUTEX1.lock();
+    
+#ifdef NO_USB_DEVICE
+    pullusb::fres *result = new pullusb::fres;
+    result->code = 0;
+    result->data = (char*)malloc(sizeof(pullusb::MAX35101EV_ANSWER));
+    
+    pullusb::MAX35101EV_ANSWER a;
+    qToBigEndian(78000, &a.hit_up_average);
+    qToBigEndian(78000, &a.hit_down_average);
+     
+     memcpy(result->data, &a, sizeof(pullusb::MAX35101EV_ANSWER));
+#else
     pullusb::fres *result = pullusb::request(_handle/*, max_data*/);
+#endif    
+        
     MUTEX1.unlock();
     
     if(result)

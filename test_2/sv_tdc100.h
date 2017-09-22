@@ -1,5 +1,5 @@
-#ifndef SV_TDC1000TTHREAD_H
-#define SV_TDC1000TTHREAD_H
+#ifndef SV_TDC1000_H
+#define SV_TDC1000_H
 
 #include <QObject>
 #include <QSerialPort>
@@ -50,46 +50,46 @@ namespace TDC1000 {
   };
   
   qres pullTDC1000(QSerialPort *serial);
-  QByteArray writeReadTDC1000(QSerialPort *serial, QByteArray data, int answer_count);
+  qres writeReadTDC1000(QSerialPort *serial, QByteArray data, int answer_count);
   
 }
 
-class SvTDC1000Thread : public QThread
-{
-  Q_OBJECT
+//class SvTDC1000Thread : public QThread
+//{
+//  Q_OBJECT
   
-public:
-  SvTDC1000Thread(const QSerialPortInfo &serialinfo);
+//public:
+//  SvTDC1000Thread(const QSerialPortInfo &serialinfo);
   
-//  bool start();
-  bool stop();
+////  bool start();
+//  bool stop();
   
-  QString lastError() { return _lastError; }
+//  QString lastError() { return _lastError; }
   
-private:
-  QSerialPort *_serial = nullptr;
-  QString _lastError = "";
+//private:
+//  QSerialPort *_serial = nullptr;
+//  QString _lastError = "";
   
-  QSerialPortInfo _current_serial_info;
+//  QSerialPortInfo _current_serial_info;
   
-  quint32 _channel = 0;
+//  quint32 _channel = 0;
   
-  QStringList _ch_setup = {"3032303230303030303030303030303030303030303030303030303030303030",
-                              "3032303230343030303030303030303030303030303030303030303030303030"};
+//  QStringList _ch_setup = {"3032303230303030303030303030303030303030303030303030303030303030",
+//                              "3032303230343030303030303030303030303030303030303030303030303030"};
   
-  bool _started;
-  bool _finished;
+//  bool _started;
+//  bool _finished;
   
-protected:
-  void run() Q_DECL_OVERRIDE;
+//protected:
+//  void run() Q_DECL_OVERRIDE;
   
-signals:
-  void newData(QByteArray &data);
+//signals:
+//  void newData(QByteArray &data);
   
-private slots:
-  void read();
+//private slots:
+//  void read();
   
   
-};
+//};
 
-#endif // SV_TDC1000TTHREAD_H
+#endif // SV_TDC1000_H

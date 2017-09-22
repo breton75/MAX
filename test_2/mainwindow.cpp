@@ -175,9 +175,9 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_bnGetDeviceList_clicked()
 {
-  _devices = QSerialPortInfo::availablePorts();
+  _available_devices = QSerialPortInfo::availablePorts();
     
-  for(QSerialPortInfo port: _devices)
+  for(QSerialPortInfo port: _available_devices)
     ui->cbDevices->addItem(port.portName());
   
 }
@@ -185,7 +185,7 @@ void MainWindow::on_bnGetDeviceList_clicked()
 void MainWindow::on_bnOneShot_clicked()
 {
   
-  _serial = new QSerialPort(_devices.at(ui->cbDevices->currentIndex()));
+  _serial = new QSerialPort(_available_devices.at(ui->cbDevices->currentIndex()));
   
   if (!_serial)
   {
@@ -196,7 +196,7 @@ void MainWindow::on_bnOneShot_clicked()
   
   if(!_serial->open(QIODevice::ReadWrite)) {
     log << svlog::Time << svlog::Critical
-        << QString("Не удалось открыть порт %1").arg(_devices.at(ui->cbDevices->currentIndex()).portName())
+        << QString("Не удалось открыть порт %1").arg(_available_devices.at(ui->cbDevices->currentIndex()).portName())
         << svlog::endl;
     return;
   }
@@ -204,7 +204,7 @@ void MainWindow::on_bnOneShot_clicked()
   TDC1000::qres res = TDC1000::pullTDC1000(_serial);
   
   if(res.result)
-    emit new_data(answer);
+    emit new_data(res.answer);
 
   _serial->close();
   delete _serial;
@@ -237,39 +237,42 @@ void MainWindow::on_bnCycle_clicked()
   
   if(!_tdc100thr)
   {
-    _tdc100thr = new SvTDC1000Thread(_devices.at(ui->cbDevices->currentIndex()));
-    connect(_tdc100thr, SIGNAL(newData(QByteArray&)), this, SLOT(new_data(QByteArray&)));
+    _serial = new QSerialPort(_available_devices.at(ui->cbDevices->currentIndex()));
     
-    if(!_tdc100thr->start()) {
-      log << svlog::Time << svlog::Critical
-          << _tdc100thr->lastError() << svlog::endl;
-      
-      _tdc100thr->quit();
-      _tdc100thr->wait();
-      
-      delete _tdc100thr;
-      _tdc100thr = nullptr;
-      
-      emit newState(false);
-      
+    if (!_serial)
+    {
+      log << svlog::Time << svlog::Critical << "Ошибка при создании устройства." 
+          << _serial->errorString() << svlog::endl;;
       return;
     }
+    
+    if(!_serial->open(QIODevice::ReadWrite)) {
+      log << svlog::Time << svlog::Critical
+          << QString("Не удалось открыть порт %1").arg(_available_devices.at(ui->cbDevices->currentIndex()).portName())
+          << svlog::endl;
+      return;
+    }
+    
+    _tdc100thr = new SvPullTDC1000(_serial, ui->spinTimer->value());
+    connect(_tdc100thr, SIGNAL(newData(QByteArray&)), this, SLOT(new_data(QByteArray&)));
+    _tdc100thr->start();
     
     emit newState(true);    
 
   }
   else
   {
-    if(!_tdc100thr->stop()) {
-      log << svlog::Time << svlog::Error
-          << _tdc100thr->lastError() << svlog::endl;
-    }
     
-    _tdc100thr->quit();
-    _tdc100thr->wait();
-    
+    _tdc100thr->stop();
+    _tdc100thr->deleteLater();
     delete _tdc100thr;
     _tdc100thr = nullptr;      
+    
+    if(_serial) {
+      if(_serial->isOpen()) _serial->close();
+      delete _serial;
+      _serial = nullptr;
+    }
     
     emit newState(false);
     
@@ -350,7 +353,7 @@ void MainWindow::new_data(QByteArray &data)
 
 
 /** ******************************* **/
-void SvPullSerial::run()
+void SvPullTDC1000::run()
 {
   _started = true;
   _finished = false;
@@ -361,7 +364,7 @@ void SvPullSerial::run()
     TDC1000::qres result = TDC1000::pullTDC1000(_serial);
     MUTEX1.unlock();
     
-    if(result)
+    if(result.result)
       emit new_data(result.answer); 
     
     msleep(_timeout);
