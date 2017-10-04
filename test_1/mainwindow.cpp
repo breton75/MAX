@@ -1,7 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include "../../Common/sv_fnt.h"
+#include "../../svlib/sv_fnt.h"
 //#include "../../svlib/sv_log.h"
 
 QMutex MUTEX1;

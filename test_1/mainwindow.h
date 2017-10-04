@@ -29,7 +29,7 @@ QT_CHARTS_USE_NAMESPACE
 #include "sv_graph.h"
 #include "sv_arduino_max.h"
 
-#include "../../Common/sv_settings.h"
+#include "../../svlib/sv_settings.h"
 
 #include "../../svlib/sv_log.h"
 #include "../../svlib/sv_tcpserverclient.h"

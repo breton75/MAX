@@ -28,7 +28,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += main.cpp\
         mainwindow.cpp \
     pull_usb.cpp \
-    ../../Common/sv_settings.cpp \
+    ../../svlib/sv_settings.cpp \
     sv_chartwidget.cpp \
     ../../Common/qcustomplot/qcustomplot.cpp \
     sv_graph.cpp \
@@ -41,8 +41,8 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     ../../libusb-1.0.21/include/libusb-1.0/libusb.h \
     pull_usb.h \
-    ../../Common/sv_settings.h \
-    ../../Common/sv_fnt.h \
+    ../../svlib/sv_settings.h \
+    ../../svlib/sv_fnt.h \
     sv_chartwidget.h \
     ../../Common/qcustomplot/qcustomplot.h \
     sv_graph.h \

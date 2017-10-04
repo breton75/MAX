@@ -139,7 +139,7 @@ void svarduinomax::SvArduinoWidget::pullSensors()
     int flags = _client->logFlags();
     _client->setFlags(svtcp::NoLog);
     
-    QString cmd = QString("SET:ENGINE:%1;").arg(int(255 * _params.engine_pw/100));
+    QString cmd = QString("SET:ENGINERT:%1;").arg(int(255 * _params.engine_pw/100));
     cmd += QString("SET:DIRECTION:%1;").arg(_params.spin_clockwise ? "CLOCKWISE" : "ANTICLOCKWISE");
 //    cmd += "START;";
     cmd += "STATE";
@@ -207,6 +207,9 @@ void svarduinomax::SvArduinoWidget::stateChanged(bool state)
   foreach (QWidget* wdg, this->findChildren<QWidget *>())
     wdg->setEnabled(!_current_state);
   
+  ui->gbSpinSpeed->setEnabled(true);
+  ui->sliderEnginePw->setEnabled(true);
+
   ui->bnStop->setEnabled(true);
   ui->bnSendCmd->setEnabled(true);
   ui->editCmd->setEnabled(true);
