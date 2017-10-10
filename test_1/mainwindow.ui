@@ -107,6 +107,9 @@
              <bold>false</bold>
             </font>
            </property>
+           <property name="suffix">
+            <string> мсек.</string>
+           </property>
            <property name="minimum">
             <number>100</number>
            </property>
@@ -131,6 +134,9 @@
              <weight>50</weight>
              <bold>false</bold>
             </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: palegreen;</string>
            </property>
            <property name="text">
             <string>Старт</string>
@@ -599,7 +605,7 @@
     </sizepolicy>
    </property>
    <property name="floating">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="features">
     <set>QDockWidget::DockWidgetFloatable|QDockWidget::DockWidgetMovable</set>
@@ -608,7 +614,7 @@
     <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
    </property>
    <property name="windowTitle">
-    <string>Plot</string>
+    <string>Окно графиков</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
@@ -642,10 +648,13 @@
   </widget>
   <widget class="QDockWidget" name="dockArduino">
    <property name="floating">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="allowedAreas">
     <set>Qt::LeftDockWidgetArea|Qt::RightDockWidgetArea</set>
+   </property>
+   <property name="windowTitle">
+    <string>Контроллер</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>

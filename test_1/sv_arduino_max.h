@@ -99,6 +99,8 @@ private:
   quint32 _current_turn;
   quint32 _last_turn = 0;
   qreal _current_turn_by_minute = 0;
+  quint32 _last_encoder = 0;
+  quint32 _current_encoder = 0;
   
   bool _current_state = false;
   

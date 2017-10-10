@@ -34,7 +34,7 @@ QT_CHARTS_USE_NAMESPACE
 #include "../../svlib/sv_log.h"
 #include "../../svlib/sv_tcpserverclient.h"
 
-#define NO_USB_DEVICE
+//#define NO_USB_DEVICE
 
 namespace Ui {
 class MainWindow;

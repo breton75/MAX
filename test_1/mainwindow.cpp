@@ -25,13 +25,14 @@ MainWindow::MainWindow(QWidget *parent) :
 //  ui->cbViewType->addItem("(t1 + t2) / 2");
 
   /* читаем параметры программы */
-  ui->spinTimer->setValue(AppParams::readParam(this, "General", "RequestTimer", 500).toInt());
+  ui->spinTimer->setValue(AppParams::readParam(this, "General", "RequestTimer", 200).toInt());
   ui->checkLog->setChecked(AppParams::readParam(this, "General", "Log", true).toBool());
 //  ui->cbViewType->setCurrentIndex(ui->cbViewType->findData(AppParams::readParam(this, "Chart", "ViewType", 0)));
   ui->cbDevices->setCurrentIndex(ui->cbDevices->findText(AppParams::readParam(this, "General", "LastDeviceName", "").toString()));
 //  ui->checkShowTOF->setChecked(AppParams::readParam(this, "Chart", "ShowTOF", false).toBool());
   ui->editSaveFileNameTemplate->setText(AppParams::readParam(this, "General", "SaveFileNameTemplate", "").toString());
   ui->editSaveFilePath->setText(AppParams::readParam(this, "General", "SaveFilePath", "").toString());
+  ui->gbSynchronizeArduino->setChecked(AppParams::readParam(this, "General", "SynchronizeArduino", true).toBool());
 
   _chp.x_range = AppParams::readParam(this, "Chart", "x_range", 300).toInt();
   _chp.x_tick_count = AppParams::readParam(this, "Chart", "x_tick_count", 26).toInt();
@@ -52,7 +53,7 @@ MainWindow::MainWindow(QWidget *parent) :
   ardp.port = AppParams::readParam(this, "Arduino", "port", 35580).toInt();
   ardp.spin_clockwise = AppParams::readParam(this, "Arduino", "spin_clockwise", true).toBool();
   ardp.engine_pw = AppParams::readParam(this, "Arduino", "engine_pw", 100).toInt();
-  ardp.state_period = AppParams::readParam(this, "Arduino", "state_period", 1).toInt();
+  ardp.state_period = ui->spinTimer->value(); //AppParams::readParam(this, "Arduino", "state_period", ui->spinTimer->value()).toInt();
   ardp.state_period_enable = AppParams::readParam(this, "Arduino", "state_period_enable", true).toBool();
   ardp.turn_angle = AppParams::readParam(this, "Arduino", "turn_angle", 180).toInt();
   ardp.turn_angle_enable = AppParams::readParam(this, "Arduino", "turn_angle_enable", false).toBool();
@@ -137,7 +138,8 @@ MainWindow::~MainWindow()
   AppParams::saveParam(this, "General", "LastDeviceName", ui->cbDevices->currentText());
   AppParams::saveParam(this, "General", "SaveFileNameTemplate", ui->editSaveFileNameTemplate->text());
   AppParams::saveParam(this, "General", "SaveFilePath", ui->editSaveFilePath->text());
-//  AppParams::saveParam(this, "Chart", "ViewType", ui->cbViewType->currentIndex());
+  AppParams::saveParam(this, "General", "SynchronizeArduino", ui->gbSynchronizeArduino->isChecked());
+  
   AppParams::saveParam(this, "Chart", "Autoscale", _chart_w->chartParams().y_autoscale);
   AppParams::saveParam(this, "Chart", "x_range", _chart_w->chartParams().x_range);
 //  AppParams::saveParam(this, "Chart", "ShowTOF", ui->checkShowTOF->isChecked());
@@ -331,7 +333,7 @@ void MainWindow::stateChanged(bool state)
   else {
    
     ui->bnCycle->setText("Старт");
-    ui->bnCycle->setStyleSheet("");
+    ui->bnCycle->setStyleSheet("background-color: palegreen;");
     
     on_bnSaveToFile_clicked(false);
   }

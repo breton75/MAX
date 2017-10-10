@@ -67,7 +67,7 @@ bool svarduinomax::SvArduinoWidget::start()
     cmd = QString("SET:ANGLE:%1;").arg(_params.turn_angle_enable ? QString::number(_params.turn_angle) : "OFF");
     cmd += QString("SET:TURN:%1;").arg(_params.turn_count_enable ? QString::number(_params.turn_count) : "OFF");
     cmd += QString("SET:ENGINE:%1;").arg(int(255 * _params.engine_pw/100));
-    cmd += QString("SET:DIRECTION:%1;").arg(_params.spin_clockwise ? "CLOCKWISE" : "ANTICLOCKWISE");
+    cmd += QString("SET:DIRECTION:%1;").arg(_params.spin_clockwise ? "CLOCKWISE" : "BACKWISE");
     cmd += QString("START");
     
     if(_client->connectToHost() != svtcp::SOCKET_OK) _exception.raise(_client->lastError());
@@ -108,7 +108,7 @@ bool svarduinomax::SvArduinoWidget::stop()
         _exception.raise(_client->lastError());
     }
     
-    _client->sendData(QString("STOP"), 2000);
+    _client->sendData(QString("STOP"));
     
   }
     
@@ -128,27 +128,31 @@ void svarduinomax::SvArduinoWidget::pullSensors()
 {
   try {
   
-    _client->setIp(_params.ip);
-    _client->setPort(_params.port);  
+//    _client->setIp(_params.ip);
+//    _client->setPort(_params.port);  
     
-    if(!_client->connected()) {
-      if(_client->connectToHost() != svtcp::SOCKET_OK)
-        _exception.raise(_client->lastError());
-    }
+    if(!_client || !_client->connected()) 
+      return;
+    
+//    {
+//      if(_client->connectToHost() != svtcp::SOCKET_OK)
+//        _exception.raise(_client->lastError());
+//    }
     
     int flags = _client->logFlags();
     _client->setFlags(svtcp::NoLog);
     
     QString cmd = QString("SET:ENGINERT:%1;").arg(int(255 * _params.engine_pw/100));
-    cmd += QString("SET:DIRECTION:%1;").arg(_params.spin_clockwise ? "CLOCKWISE" : "ANTICLOCKWISE");
-//    cmd += "START;";
+    cmd += QString("SET:DIRECTION:%1;").arg(_params.spin_clockwise ? "CLOCKWISE" : "BACKWISE");
     cmd += "STATE";
     
     _client->sendData(QString(cmd), 1000);
     _client->setFlags(flags);
     
     bool ok;
-    QStringList l = QString(_client->response()->data).split(';');
+    QString resp = QString(_client->response()->data);
+//    qDebug() << resp;
+    QStringList l = resp.split(';');
     
     time_t cur_time = time(NULL);
     
@@ -164,26 +168,41 @@ void svarduinomax::SvArduinoWidget::pullSensors()
         _current_temperature = static_cast<QString>(v.last()).toFloat(&ok);
       }
       
-      else if(state.startsWith("CURRENT:ANGLE:")) {
-        QStringList v = state.split(':');
-        _current_angle = static_cast<QString>(v.last()).toUInt(&ok);
+//      else if(state.startsWith("CURRENT:ANGLE:")) {
+//        QStringList v = state.split(':');
+//        _current_angle = static_cast<QString>(v.last()).toUInt(&ok);
         
-//        qDebug() << _current_angle << _last_angle << (cur_time - _last_time);
+////        qDebug() << _current_angle << _last_angle << (cur_time - _last_time);
         
-        if(_last_angle) {
-          _current_angle_by_second = (_current_angle - _last_angle) / (cur_time - _last_time);
-          _current_turn_by_minute = (((_current_angle - _last_angle) / (cur_time - _last_time)) * 60) / 360;
-        }
+//        if(_last_angle) {
+//          _current_angle_by_second = (_current_angle - _last_angle) / (cur_time - _last_time);
+//          _current_turn_by_minute = (((_current_angle - _last_angle) / (cur_time - _last_time)) * 60) / 360;
+//        }
         
-        _last_angle = _current_angle;
-        _last_time = cur_time;
-      }
+//        _last_angle = _current_angle;
+//        _last_time = cur_time;
+//      }
       
-      else if(state.startsWith("CURRENT:TURN:")) {
+//      else if(state.startsWith("CURRENT:TURN:")) {
+//        QStringList v = state.split(':');
+//        _current_turn = static_cast<QString>(v.last()).toUInt(&ok);
+//      }
+      
+      else if(state.startsWith("CURRENT:ENCODER:")) {
         QStringList v = state.split(':');
-        _current_turn = static_cast<QString>(v.last()).toUInt(&ok);
+        _current_encoder = static_cast<QString>(v.last()).toUInt(&ok);
+        
+        if(!ok) continue;
+//        if(_last_encoder) {
+          _current_angle_by_second = (1000.0 / qreal(_current_encoder)) * 18.0;
+          _current_turn_by_minute = _current_encoder / 100.0; // _current_angle_by_second * 60 / 360;
+//        }
+        
+//        _last_encoder = _current_encoder;
+//        _last_time = cur_time;
       }
     }
+  
   }
   
   catch (SvException &e) {
@@ -192,8 +211,8 @@ void svarduinomax::SvArduinoWidget::pullSensors()
     return;
   }
   
-  ui->textLog->setText(QString("Текущее состояние:\n  температура: %1\n  угол: %2\n  оборот: %3")
-                       .arg(_current_temperature).arg(_current_angle_by_second).arg(_current_turn_by_minute));
+  ui->textLog->setText(QString("Текущее состояние:\n  температура: %1\n  угол/сек.: %2\n  оборот/мин: %3\n  энкодер: %4")
+                       .arg(_current_temperature).arg(_current_angle_by_second).arg(_current_turn_by_minute).arg(_current_encoder));
   
 //  _log << svlog::Time << svlog::Info << "Темп." << _current_temperature
 //       << "Угол" << _current_angle << svlog::endl;
@@ -210,15 +229,15 @@ void svarduinomax::SvArduinoWidget::stateChanged(bool state)
   ui->gbSpinSpeed->setEnabled(true);
   ui->sliderEnginePw->setEnabled(true);
 
-  ui->bnStop->setEnabled(true);
-  ui->bnSendCmd->setEnabled(true);
-  ui->editCmd->setEnabled(true);
-  
   if(_state_timer) {
-    _state_timer->setInterval(_params.state_period * 1000);
+    _state_timer->setInterval(_params.state_period); // * 1000);
     if(_current_state) _state_timer->start();
     else _state_timer->stop();
   }
+  
+  ui->bnStop->setEnabled(true);
+  ui->bnSendCmd->setEnabled(true);
+  ui->editCmd->setEnabled(true);
   
   QApplication::processEvents();
     

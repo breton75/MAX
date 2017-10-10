@@ -176,13 +176,16 @@
          <number>1</number>
         </property>
         <property name="maximum">
-         <number>100</number>
+         <number>50</number>
         </property>
         <property name="singleStep">
-         <number>10</number>
+         <number>1</number>
         </property>
         <property name="value">
-         <number>100</number>
+         <number>50</number>
+        </property>
+        <property name="sliderPosition">
+         <number>50</number>
         </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -286,8 +289,14 @@
           <bold>false</bold>
          </font>
         </property>
+        <property name="styleSheet">
+         <string notr="true">background-color: rgb(255, 255, 0);</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
         <property name="suffix">
-         <string> сек.</string>
+         <string> мсек.</string>
         </property>
         <property name="prefix">
          <string>каждые </string>
@@ -296,10 +305,10 @@
          <number>1</number>
         </property>
         <property name="maximum">
-         <number>60</number>
+         <number>600000</number>
         </property>
         <property name="value">
-         <number>1</number>
+         <number>200</number>
         </property>
        </widget>
       </item>
