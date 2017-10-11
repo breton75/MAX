@@ -692,3 +692,10 @@ void MainWindow::on_listGraphs_doubleClicked(const QModelIndex &index)
 {
     on_bnEditGraph_clicked();
 }
+
+void MainWindow::on_spinTimer_editingFinished()
+{
+  svarduinomax::SvArduinoWidgetParams ap = arduino->params();
+  ap.state_period = ui->spinTimer->value();
+  arduino->setParams(ap);
+}

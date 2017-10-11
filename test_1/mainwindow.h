@@ -105,6 +105,8 @@ private slots:
   
   void stateChanged(bool state);
   
+  void on_spinTimer_editingFinished();
+  
 private:
   Ui::MainWindow *ui;
   

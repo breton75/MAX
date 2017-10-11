@@ -193,6 +193,9 @@
         <property name="tickPosition">
          <enum>QSlider::TicksBothSides</enum>
         </property>
+        <property name="tickInterval">
+         <number>5</number>
+        </property>
        </widget>
       </item>
      </layout>

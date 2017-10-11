@@ -78,7 +78,7 @@ public:
   qreal currentAngleBySecond() { return _current_angle_by_second; }
   
   svarduinomax::SvArduinoWidgetParams params() { return _params; }
-  void setParams(svarduinomax::SvArduinoWidgetParams params) { _params = params; }
+  void setParams(svarduinomax::SvArduinoWidgetParams params); 
   
 private:
   Ui::SvArduinoWidgetUi *ui;
@@ -111,6 +111,8 @@ private:
   svarduinomax::SvArduinoWidgetParams _params;
   
   SvException _exception;
+  
+  QMutex _mux;
 
 //  QTimer _timer;
   
