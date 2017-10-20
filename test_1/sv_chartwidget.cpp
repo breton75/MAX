@@ -37,11 +37,38 @@ svchart::SvChartWidget::SvChartWidget(ChartParams &params, QWidget *parent)
   
   setupUi();
   
-  spinXRange->setValue(_params.x_range);
-  bnYAutoscale->setChecked(_params.y_autoscale);  
+  connect(_customplot->xAxis, SIGNAL(rangeChanged(QCPRange)), this, SLOT(rangeChanged(QCPRange)));
   
   on_bnResetChart_clicked();
   
+//  spinXRange->setValue(_params.x_range);
+  bnYAutoscale->setChecked(_params.y_autoscale);  
+  cbXAutoScroll->setCurrentIndex(cbXAutoScroll->findData(QVariant(_params.x_autoscroll_type)));
+  cbXMeasureUnit->setCurrentIndex(cbXMeasureUnit->findData(QVariant(_params.x_measure_unit)));
+    
+  
+}
+
+svchart::SvChartWidget::~SvChartWidget()
+{ 
+  /* освобождаем память графиков */
+  for(svgraph::GraphIDs gid: _graphs.keys()) {
+    
+    /* удаляем график (также здесь освобождается память графика) */
+    _graphs.value(gid)->graph->clearData();
+    _customplot->removeGraph(_graphs.value(gid)->graph);
+   
+    /* освобождаем данные разных ед. измерения */
+    for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) 
+      delete _graphs.value(gid)->data.value(muid);
+   
+    /* освобождаем память структуры GRAPH */
+    delete _graphs.value(gid);
+    
+  }
+  
+  close();
+  deleteLater();
 }
 
 void svchart::SvChartWidget::setupUi()
@@ -90,6 +117,15 @@ void svchart::SvChartWidget::setupUi()
 
     hlayXRange->addItem(hspacer2);
 
+    bnXScrollToBegin = new QPushButton(frameXRange);
+    bnXScrollToBegin->setObjectName(QStringLiteral("bnXScrollToBegin"));
+    bnXScrollToBegin->setMaximumSize(QSize(25, 16777215));
+    QIcon icon2_1;
+    icon2_1.addFile(QStringLiteral(":/icons/arrow-left3.ico"), QSize(), QIcon::Normal, QIcon::Off);
+    bnXScrollToBegin->setIcon(icon2_1);
+
+    hlayXRange->addWidget(bnXScrollToBegin);
+    
     bnXRangeActual = new QPushButton(frameXRange);
     bnXRangeActual->setObjectName(QStringLiteral("bnXRangeActual"));
     bnXRangeActual->setMaximumSize(QSize(25, 16777215));
@@ -98,30 +134,39 @@ void svchart::SvChartWidget::setupUi()
     bnXRangeActual->setIcon(icon2);
 
     hlayXRange->addWidget(bnXRangeActual);
+    
+    bnXScrollToEnd = new QPushButton(frameXRange);
+    bnXScrollToEnd->setObjectName(QStringLiteral("bnXScrollToEnd"));
+    bnXScrollToEnd->setMaximumSize(QSize(25, 16777215));
+    QIcon icon4_1;
+    icon4_1.addFile(QStringLiteral(":/icons/arrow-right3.ico"), QSize(), QIcon::Normal, QIcon::Off);
+    bnXScrollToEnd->setIcon(icon4_1);
+
+    hlayXRange->addWidget(bnXScrollToEnd);
 
     hspacer3 = new QSpacerItem(122, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
     hlayXRange->addItem(hspacer3);
 
-    spinXRange = new QSpinBox(frameXRange);
-    spinXRange->setObjectName(QStringLiteral("spinXRange"));
-    spinXRange->setMinimum(10);
-    spinXRange->setMaximum(10000);
+//    spinXRange = new QSpinBox(frameXRange);
+//    spinXRange->setObjectName(QStringLiteral("spinXRange"));
+//    spinXRange->setMinimum(10);
+//    spinXRange->setMaximum(10000);
 
-    hlayXRange->addWidget(spinXRange);
+//    hlayXRange->addWidget(spinXRange);
 
-    bnXSetRange = new QPushButton(frameXRange);
-    bnXSetRange->setObjectName(QStringLiteral("bnXSetRange"));
-    bnXSetRange->setMaximumSize(QSize(25, 16777215));
-    QIcon icon3;
-    icon3.addFile(QStringLiteral(":/Common/Icons/Basic/Ok2.ico"), QSize(), QIcon::Normal, QIcon::Off);
-    bnXSetRange->setIcon(icon3);
+//    bnXSetRange = new QPushButton(frameXRange);
+//    bnXSetRange->setObjectName(QStringLiteral("bnXSetRange"));
+//    bnXSetRange->setMaximumSize(QSize(25, 16777215));
+//    QIcon icon3;
+//    icon3.addFile(QStringLiteral(":/Common/Icons/Basic/Ok2.ico"), QSize(), QIcon::Normal, QIcon::Off);
+//    bnXSetRange->setIcon(icon3);
 
-    hlayXRange->addWidget(bnXSetRange);
+//    hlayXRange->addWidget(bnXSetRange);
 
-    hspacer4 = new QSpacerItem(123, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
+//    hspacer4 = new QSpacerItem(123, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
 
-    hlayXRange->addItem(hspacer4);
+//    hlayXRange->addItem(hspacer4);
 
     bnXRangeUp = new QPushButton(frameXRange);
     bnXRangeUp->setObjectName(QStringLiteral("bnXRangeUp"));
@@ -136,6 +181,31 @@ void svchart::SvChartWidget::setupUi()
 
     hlayXRange->addItem(hspacer5);
 
+    
+    cbXAutoScroll = new QComboBox(frameXRange);
+    cbXAutoScroll->setObjectName(QStringLiteral("cbXAutoScroll"));
+    cbXAutoScroll->setMinimumSize(QSize(0, 0));
+    cbXAutoScroll->setStyleSheet(QStringLiteral("color: rgb(0, 97, 152);"));
+
+    cbXAutoScroll->clear();
+    cbXAutoScroll->insertItem(0, ChartXAutoscrollTypes.value(svchart::xtNoAutoScroll), QVariant(svchart::xtNoAutoScroll));
+    cbXAutoScroll->insertItem(1, ChartXAutoscrollTypes.value(svchart::xtTickScroll), QVariant(svchart::xtTickScroll));
+    cbXAutoScroll->insertItem(2, ChartXAutoscrollTypes.value(svchart::xtHalfChartScroll), QVariant(svchart::xtHalfChartScroll));
+    cbXAutoScroll->insertItem(3, ChartXAutoscrollTypes.value(svchart::xtChartScroll), QVariant(svchart::xtChartScroll));
+    
+    hlayXRange->addWidget(cbXAutoScroll);
+    
+    cbXMeasureUnit = new QComboBox(frameXRange);
+    cbXMeasureUnit->setObjectName(QStringLiteral("cbXMeasureUnit"));
+    cbXMeasureUnit->setMinimumSize(QSize(0, 0));
+    cbXMeasureUnit->setStyleSheet(QStringLiteral("color: rgb(0, 97, 152);"));
+    
+    cbXMeasureUnit->clear();
+    cbXMeasureUnit->insertItem(0, ChartXMeasureUnits.value(svchart::xmuTick), QVariant(svchart::xmuTick));
+    cbXMeasureUnit->insertItem(1, ChartXMeasureUnits.value(svchart::xmuMillisecond), QVariant(svchart::xmuMillisecond));
+//    cbXMeasureUnit->insertItem(2, ChartXMeasureUnits.value(svchart::xmuSecond), QVariant(svchart::xmuSecond));
+
+    hlayXRange->addWidget(cbXMeasureUnit);
 
     hlay1->addWidget(frameXRange);
 
@@ -224,6 +294,15 @@ void svchart::SvChartWidget::setupUi()
     QMetaObject::connectSlotsByName(this);
 } // setupUi
 
+void svchart::SvChartWidget::setParams(svchart::ChartParams &params)
+{ 
+  _params = params;
+  
+  /* определяем коэффициенты для пересчета значений оси  */
+  _x_measure_unit_koeff[svchart::xmuTick] = 1;
+  _x_measure_unit_koeff[svchart::xmuMillisecond] = _params.x_tick_period;
+}
+
 void svchart::SvChartWidget::addGraph(svgraph::GraphIDs graph_id, svgraph::GraphParams &graphParams)
 {
   /* если такой график уже есть, то ничего не добавляем и выходим */
@@ -233,6 +312,12 @@ void svchart::SvChartWidget::addGraph(svgraph::GraphIDs graph_id, svgraph::Graph
   svchart::GRAPH* g = new svchart::GRAPH;
   g->params = graphParams;
   g->graph = _customplot->addGraph();
+
+  for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) {
+    g->data.insert(muid, new QCPDataMap);
+  }
+  
+//  g->graph->setData(g->data.value(_params.x_measure_unit));
   
   _graphs.insert(graph_id, g);
 
@@ -261,14 +346,20 @@ void svchart::SvChartWidget::setGraphParams(svgraph::GraphIDs graph_id, svgraph:
 
 void svchart::SvChartWidget::removeGraph(svgraph::GraphIDs graph_id)
 {
-  /* очищаем и удаляем graph */
+  /* очищаем память */
   _graphs.value(graph_id)->graph->clearData();
+  
+  /* освобождаем данные разных ед. измерения */
+  for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) 
+     delete _graphs.value(graph_id)->data.value(muid);
+  
+  /* удаляем график (также здесь освобождается память графика) */
   _customplot->removeGraph(_graphs.value(graph_id)->graph);
   
-  /* удаляем GRAPH */
+  /* освобождаем память структуры GRAPH */
   delete _graphs.value(graph_id);
   
-  /* удаляем запись о графике из map'а */
+  /* удаляем запись о графике из списка графиков */
   _graphs.remove(graph_id);
   
   _customplot->replot();
@@ -277,9 +368,46 @@ void svchart::SvChartWidget::removeGraph(svgraph::GraphIDs graph_id)
 
 void svchart::SvChartWidget::appendData(svgraph::GraphIDs graph_id, double y)
 {
-  double x = _graphs.value(graph_id)->graph->data()->count();
-  _graphs.value(graph_id)->graph->data()->insert(x, QCPData(x, y));
+  mutex.lock();
   
+  /* вычисляем текущее значение x для различных ед. измерения */
+  _current_x[svchart::xmuTick] = _graphs.value(graph_id)->graph->data()->count();
+  _current_x[svchart::xmuMillisecond] = _graphs.value(graph_id)->graph->data()->count() * _params.x_tick_period;
+//  x.insert(svchart::xmuSecond, current_tick * _params.x_tick_period / 1000);
+  
+  /* раскидываем вычисленные значения в соответствующий массив данных */
+  for(svchart::ChartXMeasureUnitIDs muid: _current_x.keys())
+    _graphs.value(graph_id)->data.value(muid)->insert(_current_x.value(muid), QCPData(_current_x.value(muid), y));
+  
+  /* записываем значение для текущей ед. измерения */
+  _graphs.value(graph_id)->graph->data()->insert(_current_x.value(_params.x_measure_unit), QCPData(_current_x.value(_params.x_measure_unit), y));
+
+  mutex.unlock();
+  
+  /* сдвигаем график если надо */
+  if(_params.x_autoscroll_type != xtNoAutoScroll) {
+    
+    if(_current_x.value(_params.x_measure_unit) > _customplot->xAxis->range().upper) {
+      qreal dx;
+      
+      switch (_params.x_autoscroll_type) {
+        case svchart::xtTickScroll:
+          dx = _current_x.value(_params.x_measure_unit) / _graphs.value(graph_id)->graph->data()->count();
+          break;
+          
+        case svchart::xtHalfChartScroll:
+          dx = _customplot->xAxis->range().size() / 2;
+          break;
+          
+        case svchart::xtChartScroll:
+          dx = _customplot->xAxis->range().size() - 1;
+          break;
+      }
+      _customplot->xAxis->moveRange(dx);
+    }
+  }
+  
+     
   setMaxMinY(y);
   
   if(_params.y_autoscale)
@@ -296,31 +424,86 @@ void svchart::SvChartWidget::insertData(svgraph::GraphIDs graph_id, QCPData xy)
     setActualYRange();
 }
 
+void svchart::SvChartWidget::on_cbXAutoScroll_currentIndexChanged(int index)
+{
+  _params.x_autoscroll_type = static_cast<svchart::ChartXAutoscrollTypeIDs>(cbXAutoScroll->itemData(index).toInt());
+}
+
+void svchart::SvChartWidget::on_cbXMeasureUnit_currentIndexChanged(int index)
+{
+  svchart::ChartXMeasureUnitIDs last_measure_unit = _params.x_measure_unit;
+  _params.x_measure_unit = static_cast<svchart::ChartXMeasureUnitIDs>(cbXMeasureUnit->itemData(index).toInt());
+
+  mutex.lock();
+
+  /* копируем соответствующий единице измерения массив данных */
+  for(svchart::GRAPH* g: _graphs.values()) {
+    g->graph->clearData();
+    g->graph->setData(g->data.value(_params.x_measure_unit), true);
+  }
+ 
+  _customplot->xAxis->setRange(_customplot->xAxis->range().lower / _x_measure_unit_koeff.value(last_measure_unit) * _x_measure_unit_koeff.value(_params.x_measure_unit),
+                               _customplot->xAxis->range().upper / _x_measure_unit_koeff.value(last_measure_unit) * _x_measure_unit_koeff.value(_params.x_measure_unit));
+  
+  _customplot->replot();
+  
+  mutex.unlock();
+
+}
+
 void svchart::SvChartWidget::on_bnXRangeUp_clicked()
 {
-  _params.x_range *= 1.25;
-  _customplot->xAxis->setRangeUpper(_params.x_range);
-  _customplot->replot(QCustomPlot::rpQueued);
+  mutex.lock();
+  _customplot->xAxis->setRange(_customplot->xAxis->range().lower, _customplot->xAxis->range().upper * 1.25);
+  _customplot->replot();
+  mutex.unlock();
 }
 
 void svchart::SvChartWidget::on_bnXRangeDown_clicked()
 {
-  _params.x_range /= 1.25;
-  _customplot->xAxis->setRangeUpper(_params.x_range);
-  _customplot->replot(QCustomPlot::rpQueued);
+  mutex.lock();
+  qDebug() << _customplot->xAxis->range().lower << _customplot->xAxis->range().upper;
+  if(_customplot->xAxis->range().lower >= _customplot->xAxis->range().upper / 1.25)
+    return;
+  
+  _customplot->xAxis->setRange(_customplot->xAxis->range().lower, _customplot->xAxis->range().upper / 1.25);
+  _customplot->replot();
+  mutex.unlock();
 }
 
 void svchart::SvChartWidget::on_bnXRangeActual_clicked()
 {
-  _customplot->xAxis->setRange(0, _customplot->graph()->data()->count(), Qt::AlignLeft);
-  _customplot->replot(QCustomPlot::rpQueued);
+  mutex.lock();
+  _customplot->xAxis->setRange(0, _customplot->graph()->data()->count() * _x_measure_unit_koeff.value(_params.x_measure_unit), Qt::AlignLeft);
+  _customplot->replot();  
+  mutex.unlock();
 }
 
-void svchart::SvChartWidget::on_bnXSetRange_clicked()
+//void svchart::SvChartWidget::on_bnXSetRange_clicked()
+//{
+//  _params.x_range = spinXRange->value();
+//  _customplot->xAxis->setRangeUpper(_params.x_range);
+//  _customplot->replot(QCustomPlot::rpQueued);
+//}
+
+//void svchart::SvChartWidget::setXRange(double lower, double upper)
+//{
+//  _customplot->xAxis->setRange(lower, upper); // _params.x_range, Qt::AlignLeft);
+//  _customplot->replot();
+//}
+
+void svchart::SvChartWidget::on_bnXScrollToBegin_clicked()
 {
-  _params.x_range = spinXRange->value();
-  _customplot->xAxis->setRangeUpper(_params.x_range);
-  _customplot->replot(QCustomPlot::rpQueued);
+  _customplot->xAxis->setRange(0, _customplot->xAxis->range().size(), Qt::AlignLeft);
+  _customplot->replot();
+}
+
+void svchart::SvChartWidget::on_bnXScrollToEnd_clicked()
+{
+  double upper = _customplot->graph()->data()->count() * _x_measure_unit_koeff.value(_params.x_measure_unit);
+
+  _customplot->xAxis->setRange(upper - _customplot->xAxis->range().size(), upper);
+  _customplot->replot();
 }
 
 void svchart::SvChartWidget::on_bnYRangeUp_clicked()
@@ -350,13 +533,22 @@ void svchart::SvChartWidget::setActualYRange()
 
 void svchart::SvChartWidget::on_bnResetChart_clicked()
 {
-  for(int i = 0; i < _customplot->graphCount(); i++)
-    _customplot->graph(i)->clearData();
-  
-  _customplot->xAxis->setRange(0, spinXRange->value(), Qt::AlignLeft);
+  for(svchart::GRAPH* g: _graphs.values()) {
+    
+    g->graph->clearData();
+    
+    for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) {
+      delete g->data.value(muid);
+      g->data[muid] = new QCPDataMap;
+    }
+  }
+        
+  _customplot->xAxis->setRange(0, _params.x_range * _x_measure_unit_koeff.value(_params.x_measure_unit), Qt::AlignLeft);
   
   _y_max = -1000000000;
   _y_min =  1000000000;
+  
+  emit onReset();
   
   _customplot->replot();
   
@@ -369,4 +561,13 @@ void svchart::SvChartWidget::on_bnYAutoscale_clicked(bool checked)
   
   _params.y_autoscale = checked;
   
+}
+
+void svchart::SvChartWidget::rangeChanged(QCPRange range)
+{
+  _params.x_range = range.size();
+  
+  _customplot->xAxis->setLabel(QString("%1. Текущий диапазон: %2")
+                               .arg(ChartXMeasureUnits.value(_params.x_measure_unit))
+                               .arg(_customplot->xAxis->range().size()));
 }

@@ -38,10 +38,9 @@ MainWindow::MainWindow(QWidget *parent) :
   _chp.x_tick_count = AppParams::readParam(this, "Chart", "x_tick_count", 26).toInt();
   _chp.y_autoscale = AppParams::readParam(this, "Chart", "y_autoscale", false).toBool();
   _chp.y_range = AppParams::readParam(this, "Chart", "y_range", 5).toInt();
-//  _chp.y_tick_count = AppParams::readParam(this, "Chart", "y_tick_count", 11).toInt();
-//  _chp.line_color = QColor(AppParams::readParam(this, "Chart", "line_color", 0xFFFF0000).toUInt());
-//  _chp.line_width = AppParams::readParam(this, "Chart", "line_width", 2).toInt();
-//  _chp.show_TOF = ui->checkShowTOF->isChecked();
+  _chp.x_tick_period = ui->spinTimer->value();
+  _chp.x_autoscroll_type = static_cast<svchart::ChartXAutoscrollTypeIDs>(AppParams::readParam(this, "Chart", "x_autoscroll_type", 0).toInt());
+  _chp.x_measure_unit = static_cast<svchart::ChartXMeasureUnitIDs>(AppParams::readParam(this, "Chart", "x_measure_unit", 0).toInt());
 
   _chart_w = new svchart::SvChartWidget(_chp, ui->dockPlot);
   ui->verticalLayout_7->addWidget(_chart_w);
@@ -109,6 +108,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
   connect(this, SIGNAL(newState(bool)), this, SLOT(stateChanged(bool)));
   
+  connect(_chart_w, SIGNAL(onReset()), this, SLOT(onChartReset()));
   
 }
 
@@ -123,9 +123,11 @@ MainWindow::~MainWindow()
     delete _thr;
     _thr = nullptr;
     
+#ifndef NO_USB_DEVICE
     libusb_release_interface(handle, 0); // отпускаем интерфейс 0
     libusb_close(handle);  // закрываем устройство
     libusb_exit(NULL);  // завершаем работу с библиотекой  
+#endif
   }
   
   /* сохраняем парметры программы */
@@ -142,7 +144,9 @@ MainWindow::~MainWindow()
   
   AppParams::saveParam(this, "Chart", "Autoscale", _chart_w->chartParams().y_autoscale);
   AppParams::saveParam(this, "Chart", "x_range", _chart_w->chartParams().x_range);
-//  AppParams::saveParam(this, "Chart", "ShowTOF", ui->checkShowTOF->isChecked());
+  AppParams::saveParam(this, "Chart", "x_autoscroll_type", static_cast<int>(_chart_w->chartParams().x_autoscroll_type));
+  AppParams::saveParam(this, "Chart", "x_measure_unit", static_cast<int>(_chart_w->chartParams().x_measure_unit));
+//  AppParams::saveParam(this, "Chart", "", );
   
   /* сохраняем список графиков */
   AppParams::saveParam(this, "Chart", "GraphCount", _chart_w->graphCount());
@@ -261,7 +265,9 @@ void MainWindow::on_bnCycle_clicked()
   ui->frame->setEnabled(false);
   QApplication::processEvents();
   
-
+  // параметры окна графиков
+  _chp.x_tick_period = ui->spinTimer->value();
+  _chart_w->setParams(_chp);
   
   if(!_thr)
   {
@@ -383,7 +389,7 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
 
     if(ui->checkLog->isChecked())
       ui->textLog->append(QString("%1%2\tHit Up Avg: %3\tHit Down Avg: %4\tTOF diff: %5\tVpot: %6\tVsnd: %7")
-                          .arg(_chart_w->pointCount())
+                          .arg(_tick_count++)
                           .arg(QTime::currentTime().toString("mm:ss.zzz"))
                           .arg(t1).arg(t2).arg(_calcs.value(svgraph::giTOFdiff), 0, 'f', 6)
                           .arg(_calcs.value(svgraph::giVpot), 0, 'f', 3)
@@ -425,13 +431,14 @@ void SvPullUsb::run()
     result->data = (char*)malloc(sizeof(pullusb::MAX35101EV_ANSWER));
     
     pullusb::MAX35101EV_ANSWER a;
-    qToBigEndian(78000, &a.hit_up_average);
-    qToBigEndian(78000, &a.hit_down_average);
+//    qDebug() << rand();
+    qToBigEndian(((rand()%10 + 1) / 10.0) * 78000, &a.hit_up_average);
+    qToBigEndian(((rand()%10 + 2) / 10.0) * 78000, &a.hit_down_average);
      
      memcpy(result->data, &a, sizeof(pullusb::MAX35101EV_ANSWER));
 #else
     pullusb::fres *result = pullusb::request(_handle/*, max_data*/);
-#endif    
+#endif     
         
     MUTEX1.unlock();
     

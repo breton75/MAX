@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>900</width>
+    <width>853</width>
     <height>531</height>
    </rect>
   </property>
@@ -37,16 +37,13 @@
         <iconset resource="res.qrc">
          <normaloff>:/Common/Icons/Basic/Refresh.ico</normaloff>:/Common/Icons/Basic/Refresh.ico</iconset>
        </property>
+       <property name="shortcut">
+        <string>Ctrl+R</string>
+       </property>
       </widget>
      </item>
      <item>
       <widget class="QFrame" name="frameXRange">
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Raised</enum>
-       </property>
        <layout class="QHBoxLayout" name="hlayXRange">
         <property name="leftMargin">
          <number>4</number>
@@ -104,6 +101,26 @@
          </spacer>
         </item>
         <item>
+         <widget class="QPushButton" name="bnXScrollToBegin">
+          <property name="maximumSize">
+           <size>
+            <width>25</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset resource="res.qrc">
+            <normaloff>:/icons/arrow-left3.ico</normaloff>:/icons/arrow-left3.ico</iconset>
+          </property>
+          <property name="shortcut">
+           <string>Ctrl+B</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QPushButton" name="bnXRangeActual">
           <property name="maximumSize">
            <size>
@@ -117,6 +134,26 @@
           <property name="icon">
            <iconset resource="res.qrc">
             <normaloff>:/Common/Icons/Basic/Search.ico</normaloff>:/Common/Icons/Basic/Search.ico</iconset>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="bnScrollToEnd">
+          <property name="maximumSize">
+           <size>
+            <width>25</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="text">
+           <string/>
+          </property>
+          <property name="icon">
+           <iconset resource="res.qrc">
+            <normaloff>:/icons/arrow-right3.ico</normaloff>:/icons/arrow-right3.ico</iconset>
+          </property>
+          <property name="shortcut">
+           <string>Ctrl+E</string>
           </property>
          </widget>
         </item>
@@ -203,6 +240,79 @@
           </property>
          </spacer>
         </item>
+        <item>
+         <widget class="QComboBox" name="cbXAutoScroll">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 97, 152);</string>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhNone</set>
+          </property>
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <item>
+           <property name="text">
+            <string>Автосдвиг: &lt;Нет&gt;</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Автосдвиг: На одну точку</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Автосдвиг: На 1/2 графика</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Автосдвиг: На целый график</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="cbXMeasureUnit">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 97, 152);</string>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhNone</set>
+          </property>
+          <property name="currentIndex">
+           <number>1</number>
+          </property>
+          <item>
+           <property name="text">
+            <string>Ед. изм.: Отсчеты</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Ед. изм.: Миллисекунды</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Ед. изм.: Секунды</string>
+           </property>
+          </item>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
@@ -212,12 +322,6 @@
     <layout class="QHBoxLayout" name="hlay2">
      <item>
       <widget class="QFrame" name="frameYRange">
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Raised</enum>
-       </property>
        <layout class="QVBoxLayout" name="vlayYRange">
         <property name="spacing">
          <number>2</number>
