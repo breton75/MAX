@@ -75,7 +75,7 @@ namespace svchart {
   
   const QMap<ChartXMeasureUnitIDs, QString> ChartXMeasureUnits = {
     {xmuTick, "Отсчеты"},
-    {xmuMillisecond, "Миллисекунды"}
+//    {xmuMillisecond, "Миллисекунды"}
 //    {xmuSecond, "Секунды"}    
   };
   
@@ -94,7 +94,7 @@ namespace svchart {
   struct GRAPH {
     QCPGraph* graph;
     svgraph::GraphParams params;
-    QMap<ChartXMeasureUnitIDs, QCPDataMap*> data;
+//    QMap<ChartXMeasureUnitIDs, QCPDataMap*> data;
 //    quint64 tick_count = 0;
   };
   
@@ -157,12 +157,12 @@ private:
 //    quint64 _tick_count = 0;
     
     /* коэффициенты для пересчета оси Х для разных ед. измерения */
-    QMap<svchart::ChartXMeasureUnitIDs, qreal> _x_measure_unit_koeff = {
-      {svchart::xmuTick, 0.0}, {svchart::xmuMillisecond, 0.0} };
+//    QMap<svchart::ChartXMeasureUnitIDs, qreal> _x_measure_unit_koeff = {
+//      {svchart::xmuTick, 0.0}, {svchart::xmuMillisecond, 0.0} };
     
     /* вычисляемые текущие значения Х для разных ед. измерения */
-    QMap<svchart::ChartXMeasureUnitIDs, double> _current_x = {
-      {svchart::xmuTick, 0.0}, {svchart::xmuMillisecond, 0.0}};
+//    QMap<svchart::ChartXMeasureUnitIDs, double> _current_x = {
+//      {svchart::xmuTick, 0.0}, {svchart::xmuMillisecond, 0.0}};
     
     /** виджеты **/
     void setupUi();
@@ -213,7 +213,7 @@ private slots:
     void on_bnResetChart_clicked();
     void on_bnYAutoscale_clicked(bool checked);
     void on_cbXAutoScroll_currentIndexChanged(int index);
-    void on_cbXMeasureUnit_currentIndexChanged(int index);
+//    void on_cbXMeasureUnit_currentIndexChanged(int index);
     
 //    void setXRange(double lower, double upper);
 signals:

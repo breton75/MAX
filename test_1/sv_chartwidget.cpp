@@ -44,7 +44,7 @@ svchart::SvChartWidget::SvChartWidget(ChartParams &params, QWidget *parent)
 //  spinXRange->setValue(_params.x_range);
   bnYAutoscale->setChecked(_params.y_autoscale);  
   cbXAutoScroll->setCurrentIndex(cbXAutoScroll->findData(QVariant(_params.x_autoscroll_type)));
-  cbXMeasureUnit->setCurrentIndex(cbXMeasureUnit->findData(QVariant(_params.x_measure_unit)));
+  cbXMeasureUnit->setCurrentIndex(cbXMeasureUnit->findData(QVariant(_params.x_measure_unit))); 
     
   
 }
@@ -59,8 +59,8 @@ svchart::SvChartWidget::~SvChartWidget()
     _customplot->removeGraph(_graphs.value(gid)->graph);
    
     /* освобождаем данные разных ед. измерения */
-    for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) 
-      delete _graphs.value(gid)->data.value(muid);
+//    for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) 
+//      delete _graphs.value(gid)->data.value(muid);
    
     /* освобождаем память структуры GRAPH */
     delete _graphs.value(gid);
@@ -202,7 +202,7 @@ void svchart::SvChartWidget::setupUi()
     
     cbXMeasureUnit->clear();
     cbXMeasureUnit->insertItem(0, ChartXMeasureUnits.value(svchart::xmuTick), QVariant(svchart::xmuTick));
-    cbXMeasureUnit->insertItem(1, ChartXMeasureUnits.value(svchart::xmuMillisecond), QVariant(svchart::xmuMillisecond));
+//    cbXMeasureUnit->insertItem(1, ChartXMeasureUnits.value(svchart::xmuMillisecond), QVariant(svchart::xmuMillisecond));
 //    cbXMeasureUnit->insertItem(2, ChartXMeasureUnits.value(svchart::xmuSecond), QVariant(svchart::xmuSecond));
 
     hlayXRange->addWidget(cbXMeasureUnit);
@@ -299,8 +299,8 @@ void svchart::SvChartWidget::setParams(svchart::ChartParams &params)
   _params = params;
   
   /* определяем коэффициенты для пересчета значений оси  */
-  _x_measure_unit_koeff[svchart::xmuTick] = 1;
-  _x_measure_unit_koeff[svchart::xmuMillisecond] = _params.x_tick_period;
+//  _x_measure_unit_koeff[svchart::xmuTick] = 1;
+//  _x_measure_unit_koeff[svchart::xmuMillisecond] = _params.x_tick_period;
 }
 
 void svchart::SvChartWidget::addGraph(svgraph::GraphIDs graph_id, svgraph::GraphParams &graphParams)
@@ -313,9 +313,9 @@ void svchart::SvChartWidget::addGraph(svgraph::GraphIDs graph_id, svgraph::Graph
   g->params = graphParams;
   g->graph = _customplot->addGraph();
 
-  for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) {
-    g->data.insert(muid, new QCPDataMap);
-  }
+//  for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) {
+//    g->data.insert(muid, new QCPDataMap);
+//  }
   
 //  g->graph->setData(g->data.value(_params.x_measure_unit));
   
@@ -350,8 +350,8 @@ void svchart::SvChartWidget::removeGraph(svgraph::GraphIDs graph_id)
   _graphs.value(graph_id)->graph->clearData();
   
   /* освобождаем данные разных ед. измерения */
-  for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) 
-     delete _graphs.value(graph_id)->data.value(muid);
+//  for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) 
+//     delete _graphs.value(graph_id)->data.value(muid);
   
   /* удаляем график (также здесь освобождается память графика) */
   _customplot->removeGraph(_graphs.value(graph_id)->graph);
@@ -370,29 +370,31 @@ void svchart::SvChartWidget::appendData(svgraph::GraphIDs graph_id, double y)
 {
   mutex.lock();
   
+  quint32 tick = _graphs.value(graph_id)->graph->data()->count();
+  
   /* вычисляем текущее значение x для различных ед. измерения */
-  _current_x[svchart::xmuTick] = _graphs.value(graph_id)->graph->data()->count();
-  _current_x[svchart::xmuMillisecond] = _graphs.value(graph_id)->graph->data()->count() * _params.x_tick_period;
+//  _current_x[svchart::xmuTick] = _graphs.value(graph_id)->graph->data()->count();
+//  _current_x[svchart::xmuMillisecond] = _graphs.value(graph_id)->graph->data()->count() * _params.x_tick_period;
 //  x.insert(svchart::xmuSecond, current_tick * _params.x_tick_period / 1000);
   
   /* раскидываем вычисленные значения в соответствующий массив данных */
-  for(svchart::ChartXMeasureUnitIDs muid: _current_x.keys())
-    _graphs.value(graph_id)->data.value(muid)->insert(_current_x.value(muid), QCPData(_current_x.value(muid), y));
+//  for(svchart::ChartXMeasureUnitIDs muid: _current_x.keys())
+//    _graphs.value(graph_id)->data.value(muid)->insert(_current_x.value(muid), QCPData(_current_x.value(muid), y));
   
   /* записываем значение для текущей ед. измерения */
-  _graphs.value(graph_id)->graph->data()->insert(_current_x.value(_params.x_measure_unit), QCPData(_current_x.value(_params.x_measure_unit), y));
+  _graphs.value(graph_id)->graph->data()->insert(tick, QCPData(tick, y));
 
   mutex.unlock();
   
   /* сдвигаем график если надо */
   if(_params.x_autoscroll_type != xtNoAutoScroll) {
     
-    if(_current_x.value(_params.x_measure_unit) > _customplot->xAxis->range().upper) {
+    if(tick > _customplot->xAxis->range().upper) {
       qreal dx;
       
       switch (_params.x_autoscroll_type) {
         case svchart::xtTickScroll:
-          dx = _current_x.value(_params.x_measure_unit) / _graphs.value(graph_id)->graph->data()->count();
+          dx = 1;
           break;
           
         case svchart::xtHalfChartScroll:
@@ -429,27 +431,27 @@ void svchart::SvChartWidget::on_cbXAutoScroll_currentIndexChanged(int index)
   _params.x_autoscroll_type = static_cast<svchart::ChartXAutoscrollTypeIDs>(cbXAutoScroll->itemData(index).toInt());
 }
 
-void svchart::SvChartWidget::on_cbXMeasureUnit_currentIndexChanged(int index)
-{
-  svchart::ChartXMeasureUnitIDs last_measure_unit = _params.x_measure_unit;
-  _params.x_measure_unit = static_cast<svchart::ChartXMeasureUnitIDs>(cbXMeasureUnit->itemData(index).toInt());
+//void svchart::SvChartWidget::on_cbXMeasureUnit_currentIndexChanged(int index)
+//{
+//  svchart::ChartXMeasureUnitIDs last_measure_unit = _params.x_measure_unit;
+//  _params.x_measure_unit = static_cast<svchart::ChartXMeasureUnitIDs>(cbXMeasureUnit->itemData(index).toInt());
 
-  mutex.lock();
+//  mutex.lock();
 
-  /* копируем соответствующий единице измерения массив данных */
-  for(svchart::GRAPH* g: _graphs.values()) {
-    g->graph->clearData();
-    g->graph->setData(g->data.value(_params.x_measure_unit), true);
-  }
+//  /* копируем соответствующий единице измерения массив данных */
+//  for(svchart::GRAPH* g: _graphs.values()) {
+//    g->graph->clearData();
+//    g->graph->setData(g->data.value(_params.x_measure_unit), true);
+//  }
  
-  _customplot->xAxis->setRange(_customplot->xAxis->range().lower / _x_measure_unit_koeff.value(last_measure_unit) * _x_measure_unit_koeff.value(_params.x_measure_unit),
-                               _customplot->xAxis->range().upper / _x_measure_unit_koeff.value(last_measure_unit) * _x_measure_unit_koeff.value(_params.x_measure_unit));
+//  _customplot->xAxis->setRange(_customplot->xAxis->range().lower / _x_measure_unit_koeff.value(last_measure_unit) * _x_measure_unit_koeff.value(_params.x_measure_unit),
+//                               _customplot->xAxis->range().upper / _x_measure_unit_koeff.value(last_measure_unit) * _x_measure_unit_koeff.value(_params.x_measure_unit));
   
-  _customplot->replot();
+//  _customplot->replot();
   
-  mutex.unlock();
+//  mutex.unlock();
 
-}
+//}
 
 void svchart::SvChartWidget::on_bnXRangeUp_clicked()
 {
@@ -462,19 +464,20 @@ void svchart::SvChartWidget::on_bnXRangeUp_clicked()
 void svchart::SvChartWidget::on_bnXRangeDown_clicked()
 {
   mutex.lock();
-  qDebug() << _customplot->xAxis->range().lower << _customplot->xAxis->range().upper;
+
   if(_customplot->xAxis->range().lower >= _customplot->xAxis->range().upper / 1.25)
     return;
   
   _customplot->xAxis->setRange(_customplot->xAxis->range().lower, _customplot->xAxis->range().upper / 1.25);
   _customplot->replot();
+  
   mutex.unlock();
 }
 
 void svchart::SvChartWidget::on_bnXRangeActual_clicked()
 {
   mutex.lock();
-  _customplot->xAxis->setRange(0, _customplot->graph()->data()->count() * _x_measure_unit_koeff.value(_params.x_measure_unit), Qt::AlignLeft);
+  _customplot->xAxis->setRange(0, _customplot->graph()->data()->count(), Qt::AlignLeft);
   _customplot->replot();  
   mutex.unlock();
 }
@@ -500,7 +503,7 @@ void svchart::SvChartWidget::on_bnXScrollToBegin_clicked()
 
 void svchart::SvChartWidget::on_bnXScrollToEnd_clicked()
 {
-  double upper = _customplot->graph()->data()->count() * _x_measure_unit_koeff.value(_params.x_measure_unit);
+  double upper = _customplot->graph()->data()->count(); // * _x_measure_unit_koeff.value(_params.x_measure_unit);
 
   _customplot->xAxis->setRange(upper - _customplot->xAxis->range().size(), upper);
   _customplot->replot();
@@ -537,13 +540,13 @@ void svchart::SvChartWidget::on_bnResetChart_clicked()
     
     g->graph->clearData();
     
-    for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) {
-      delete g->data.value(muid);
-      g->data[muid] = new QCPDataMap;
-    }
+//    for(ChartXMeasureUnitIDs muid: ChartXMeasureUnitList) {
+//      delete g->data.value(muid);
+//      g->data[muid] = new QCPDataMap;
+//    }
   }
         
-  _customplot->xAxis->setRange(0, _params.x_range * _x_measure_unit_koeff.value(_params.x_measure_unit), Qt::AlignLeft);
+  _customplot->xAxis->setRange(0, _params.x_range, Qt::AlignLeft);
   
   _y_max = -1000000000;
   _y_min =  1000000000;

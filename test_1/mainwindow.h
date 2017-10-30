@@ -52,6 +52,7 @@ struct GraphInfo {
 struct FileHeader {
   char signature[15] = {'F','L','O','W',' ','R','A','T','E',' ','S','T','A','N','D'};
   int graph_count;
+  quint32 start_x;
 };
 #pragma pack(pop)
 
@@ -75,7 +76,7 @@ class MainWindow : public QMainWindow
 {
   Q_OBJECT
   
-  QString FILE_EXT = "frs";
+  const QString FILE_EXT = "frs";
   
 public:
   explicit MainWindow(QWidget *parent = 0);
@@ -108,6 +109,8 @@ private slots:
   void on_spinTimer_editingFinished();
   
   void onChartReset() { _tick_count = 0; }
+  
+  void on_bnSaveBmp_clicked();
   
 private:
   Ui::MainWindow *ui;

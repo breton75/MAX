@@ -311,10 +311,7 @@ void MainWindow::on_bnCycle_clicked()
 
     /** ВНИМАНИЕ здесь вызывается деструктор ~SvPullUsb() **/  
     delete _thr; 
-    
-    qDebug() << 6;
     _thr = nullptr;
-    qDebug() << "dsdsd";
     
 #ifndef NO_USB_DEVICE
       libusb_release_interface(handle, 0); // отпускаем интерфейс 0
@@ -410,10 +407,8 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
 
 SvPullUsb::~SvPullUsb()
 { 
-  qDebug() << 1;
   stop();
   deleteLater();
-  qDebug() << 4;
 }
 
 void SvPullUsb::run()
@@ -448,7 +443,6 @@ void SvPullUsb::run()
     
   }
   
-//  qDebug() << "_started" << _started;
   _finished = true;
   
 }
@@ -456,9 +450,7 @@ void SvPullUsb::run()
 void SvPullUsb::stop()
 {
   _started = false;
-  qDebug() << 2;
   while(!_finished) QApplication::processEvents();
-  qDebug() << 3;
 }
 
 /** ****************************************** **/
@@ -479,7 +471,7 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
             return;
         }
 
-        s += FILE_EXT;
+//        s += ("." + FILE_EXT);
 
         MUTEX1.lock();
 
@@ -499,6 +491,7 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
           FileHeader file_head;
           
           file_head.graph_count = _chart->graphCount();
+          file_head.start_x = _tick_count;
           _file->write((const char*)&file_head, sizeof(FileHeader));
           
           /* параметры графиков */
@@ -522,9 +515,8 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
 
         /* затем выводим сообщение об ошибке и выходим */
         if(!b) {
-            QMessageBox::critical(0, "Error", s, QMessageBox::Ok);
-            ui->bnSaveToFile->setChecked(false);
-//            return;
+          log << svlog::Time << svlog::Critical << s << svlog::endl;
+          ui->bnSaveToFile->setChecked(false);
         }
 
     }
@@ -570,21 +562,25 @@ void MainWindow::on_bnOpenFile_clicked()
     return;
   }
   
-  QByteArray b = f.read(15);
+  /* читаем параметры */
+  FileHeader header;
+  f.read((char*)(&header), sizeof(FileHeader));
+
+  int graph_cnt = header.graph_count;
+  quint32 start_x = header.start_x;
+  
+  //  QByteArray b = f.read(15);
 //  if(b != FileHeader.signature) {
 //    f.close();
 //    return;
 //  }
   
+//  f.read((char*)&graph_cnt, sizeof(int));
+  
   /* создаем окно для вывода графиков */
   svchart::ChartParams p = _chart->params();
   svchart::SvChartWidget *chart = new svchart::SvChartWidget(p);
   
-  /* читаем количество графиков */
-  int graph_cnt;
-  f.read((char*)&graph_cnt, sizeof(int));
-  
-//  qDebug() << 
   /* добавляем графики */
   QList<svgraph::GraphIDs> graph_ids;
   for(int i = 0; i < graph_cnt; i++) {
@@ -707,4 +703,27 @@ void MainWindow::on_spinTimer_editingFinished()
   svarduinomax::SvArduinoWidgetParams ap = _arduino->params();
   ap.state_period = ui->spinTimer->value();
   _arduino->setParams(ap);
+}
+
+void MainWindow::on_bnSaveBmp_clicked()
+{
+  svfnt::SvRE re(QDateTime::currentDateTime());
+  re.relist << qMakePair(svfnt::RE_EXT, QString("bmp"));
+  
+  QString s = svfnt::get_file_path(ui->editSaveFilePath->text(), ui->editSaveFileNameTemplate->text(), re);
+  if(s.isEmpty()) {
+    log << svlog::Time << svlog::Critical << "Неверный путь или имя файла для сохранения" << svlog::endl;
+    return;
+  }
+
+//  s += ".bmp";
+  
+    if(_chart->customplot()->saveBmp(s))
+      log << svlog::Time << svlog::Info
+          << QString("Файл %1 успешно сохранен.").arg(svfnt::replace_re(ui->editSaveFileNameTemplate->text(), re))
+          << svlog::endl;
+    else
+      log << svlog::Time << svlog::Info
+          << QString("Не удалось сохранить файл %1.").arg(svfnt::replace_re(ui->editSaveFileNameTemplate->text(), re))
+          << svlog::endl;
 }
