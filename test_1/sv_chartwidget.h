@@ -112,7 +112,7 @@ public:
     ~SvChartWidget();
     
     QCustomPlot *customplot() { return _customplot; }
-    svchart::ChartParams chartParams() { return _params; }
+    svchart::ChartParams params() { return _params; }
     void setParams(svchart::ChartParams &params);
     
     

@@ -34,35 +34,34 @@ MainWindow::MainWindow(QWidget *parent) :
   ui->editSaveFilePath->setText(AppParams::readParam(this, "General", "SaveFilePath", "").toString());
   ui->gbSynchronizeArduino->setChecked(AppParams::readParam(this, "General", "SynchronizeArduino", true).toBool());
 
-  _chp.x_range = AppParams::readParam(this, "Chart", "x_range", 300).toInt();
-  _chp.x_tick_count = AppParams::readParam(this, "Chart", "x_tick_count", 26).toInt();
-  _chp.y_autoscale = AppParams::readParam(this, "Chart", "y_autoscale", false).toBool();
-  _chp.y_range = AppParams::readParam(this, "Chart", "y_range", 5).toInt();
-  _chp.x_tick_period = ui->spinTimer->value();
-  _chp.x_autoscroll_type = static_cast<svchart::ChartXAutoscrollTypeIDs>(AppParams::readParam(this, "Chart", "x_autoscroll_type", 0).toInt());
-  _chp.x_measure_unit = static_cast<svchart::ChartXMeasureUnitIDs>(AppParams::readParam(this, "Chart", "x_measure_unit", 0).toInt());
+  _chart_params.x_range = AppParams::readParam(this, "Chart", "x_range", 300).toInt();
+  _chart_params.x_tick_count = AppParams::readParam(this, "Chart", "x_tick_count", 26).toInt();
+  _chart_params.y_autoscale = AppParams::readParam(this, "Chart", "y_autoscale", false).toBool();
+  _chart_params.y_range = AppParams::readParam(this, "Chart", "y_range", 5).toInt();
+  _chart_params.x_tick_period = ui->spinTimer->value();
+  _chart_params.x_autoscroll_type = static_cast<svchart::ChartXAutoscrollTypeIDs>(AppParams::readParam(this, "Chart", "x_autoscroll_type", 0).toInt());
+  _chart_params.x_measure_unit = static_cast<svchart::ChartXMeasureUnitIDs>(AppParams::readParam(this, "Chart", "x_measure_unit", 0).toInt());
 
-  _chart_w = new svchart::SvChartWidget(_chp, ui->dockPlot);
-  ui->verticalLayout_7->addWidget(_chart_w);
-//  _chart_w->show();
+  _chart = new svchart::SvChartWidget(_chart_params, ui->dockPlot);
+  ui->verticalLayout_7->addWidget(_chart);
+//  _chart->show();
   
   /* параметры arduino */
-  svarduinomax::SvArduinoWidgetParams ardp;
-  ardp.ip = AppParams::readParam(this, "Arduino", "ip", "192.168.44.44").toString();
-  ardp.port = AppParams::readParam(this, "Arduino", "port", 35580).toInt();
-  ardp.spin_clockwise = AppParams::readParam(this, "Arduino", "spin_clockwise", true).toBool();
-  ardp.engine_pw = AppParams::readParam(this, "Arduino", "engine_pw", 100).toInt();
-  ardp.state_period = ui->spinTimer->value(); //AppParams::readParam(this, "Arduino", "state_period", ui->spinTimer->value()).toInt();
-  ardp.state_period_enable = AppParams::readParam(this, "Arduino", "state_period_enable", true).toBool();
-  ardp.turn_angle = AppParams::readParam(this, "Arduino", "turn_angle", 180).toInt();
-  ardp.turn_angle_enable = AppParams::readParam(this, "Arduino", "turn_angle_enable", false).toBool();
-  ardp.turn_count = AppParams::readParam(this, "Arduino", "turn_count", 1).toInt();
-  ardp.turn_count_enable = AppParams::readParam(this, "Arduino", "turn_count_enable", false).toBool();
-  ardp.current_voltage = AppParams::readParam(this, "Arduino", "current_voltage", 12).toInt();
-//  ardp. = AppParams::readParam(this, "Arduino", "", );
+  _arduino_params.ip = AppParams::readParam(this, "Arduino", "ip", "192.168.44.44").toString();
+  _arduino_params.port = AppParams::readParam(this, "Arduino", "port", 35580).toInt();
+  _arduino_params.spin_clockwise = AppParams::readParam(this, "Arduino", "spin_clockwise", true).toBool();
+  _arduino_params.engine_pw = AppParams::readParam(this, "Arduino", "engine_pw", 100).toInt();
+  _arduino_params.state_period = ui->spinTimer->value(); //AppParams::readParam(this, "Arduino", "state_period", ui->spinTimer->value()).toInt();
+  _arduino_params.state_period_enable = AppParams::readParam(this, "Arduino", "state_period_enable", true).toBool();
+  _arduino_params.turn_angle = AppParams::readParam(this, "Arduino", "turn_angle", 180).toInt();
+  _arduino_params.turn_angle_enable = AppParams::readParam(this, "Arduino", "turn_angle_enable", false).toBool();
+  _arduino_params.turn_count = AppParams::readParam(this, "Arduino", "turn_count", 1).toInt();
+  _arduino_params.turn_count_enable = AppParams::readParam(this, "Arduino", "turn_count_enable", false).toBool();
+  _arduino_params.current_voltage = AppParams::readParam(this, "Arduino", "current_voltage", 12).toInt();
+//  _arduino_params. = AppParams::readParam(this, "Arduino", "", );
   
-  arduino = new svarduinomax::SvArduinoWidget(ardp, ui->textLog, 0);
-  ui->verticalLayout_9->addWidget(arduino);
+  _arduino = new svarduinomax::SvArduinoWidget(_arduino_params, ui->textLog, 0);
+  ui->verticalLayout_9->addWidget(_arduino);
   
   /* параметры главного окна */
   AppParams::WindowParams p = AppParams::readWindowParams(this);
@@ -94,7 +93,7 @@ MainWindow::MainWindow(QWidget *parent) :
     p.line_width = AppParams::readParam(this, QString("Graph_%1").arg(i), "LineWidth", 1).toInt();
     p.legend = AppParams::readParam(this, QString("Graph_%1").arg(i), "LineLegend", "").toString();
 
-    _chart_w->addGraph(p.type, p);
+    _chart->addGraph(p.type, p);
     _addGraphToList(p.type, p);
     
   }
@@ -108,7 +107,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
   connect(this, SIGNAL(newState(bool)), this, SLOT(stateChanged(bool)));
   
-  connect(_chart_w, SIGNAL(onReset()), this, SLOT(onChartReset()));
+  connect(_chart, SIGNAL(onReset()), this, SLOT(onChartReset()));
   
 }
 
@@ -117,9 +116,7 @@ MainWindow::~MainWindow()
   /* завершаем работу с платой */
   if(_thr)
   {
-//    _thr->killTimer(_timerId);
-    _thr->stop();
-    _thr->deleteLater(); 
+    /** ВНИМАНИЕ здесь вызывается деструктор ~SvPullUsb() **/  
     delete _thr;
     _thr = nullptr;
     
@@ -142,36 +139,36 @@ MainWindow::~MainWindow()
   AppParams::saveParam(this, "General", "SaveFilePath", ui->editSaveFilePath->text());
   AppParams::saveParam(this, "General", "SynchronizeArduino", ui->gbSynchronizeArduino->isChecked());
   
-  AppParams::saveParam(this, "Chart", "Autoscale", _chart_w->chartParams().y_autoscale);
-  AppParams::saveParam(this, "Chart", "x_range", _chart_w->chartParams().x_range);
-  AppParams::saveParam(this, "Chart", "x_autoscroll_type", static_cast<int>(_chart_w->chartParams().x_autoscroll_type));
-  AppParams::saveParam(this, "Chart", "x_measure_unit", static_cast<int>(_chart_w->chartParams().x_measure_unit));
+  AppParams::saveParam(this, "Chart", "Autoscale", _chart->params().y_autoscale);
+  AppParams::saveParam(this, "Chart", "x_range", _chart->params().x_range);
+  AppParams::saveParam(this, "Chart", "x_autoscroll_type", static_cast<int>(_chart->params().x_autoscroll_type));
+  AppParams::saveParam(this, "Chart", "x_measure_unit", static_cast<int>(_chart->params().x_measure_unit));
 //  AppParams::saveParam(this, "Chart", "", );
   
   /* сохраняем список графиков */
-  AppParams::saveParam(this, "Chart", "GraphCount", _chart_w->graphCount());
+  AppParams::saveParam(this, "Chart", "GraphCount", _chart->graphCount());
   
-  for (int i = 0; i < _chart_w->graphList().count(); i++) {
-    svgraph::GraphIDs graph_id = _chart_w->graphList()[i];
+  for (int i = 0; i < _chart->graphList().count(); i++) {
+    svgraph::GraphIDs graph_id = _chart->graphList()[i];
     AppParams::saveParam(this, QString("Graph_%1").arg(i), "TypeID", int(graph_id));
-    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineColor", _chart_w->graphParams(graph_id).line_color.name());
-    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineStyle", _chart_w->graphParams(graph_id).line_style);
-    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineWidth", _chart_w->graphParams(graph_id).line_width);
-    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineLegend", _chart_w->graphParams(graph_id).legend);
+    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineColor", _chart->graphParams(graph_id).line_color.name());
+    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineStyle", _chart->graphParams(graph_id).line_style);
+    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineWidth", _chart->graphParams(graph_id).line_width);
+    AppParams::saveParam(this, QString("Graph_%1").arg(i), "LineLegend", _chart->graphParams(graph_id).legend);
   }
   
   /* параметры arduino */
-  AppParams::saveParam(this, "Arduino", "ip", arduino->params().ip);
-  AppParams::saveParam(this, "Arduino", "port", arduino->params().port);
-  AppParams::saveParam(this, "Arduino", "spin_clockwise", arduino->params().spin_clockwise);
-  AppParams::saveParam(this, "Arduino", "engine_pw", arduino->params().engine_pw);
-  AppParams::saveParam(this, "Arduino", "state_period", arduino->params().state_period);
-  AppParams::saveParam(this, "Arduino", "state_period_enable", arduino->params().state_period_enable);
-  AppParams::saveParam(this, "Arduino", "turn_angle", arduino->params().turn_angle);
-  AppParams::saveParam(this, "Arduino", "turn_angle_enable", arduino->params().turn_angle_enable);
-  AppParams::saveParam(this, "Arduino", "turn_count", arduino->params().turn_count);
-  AppParams::saveParam(this, "Arduino", "turn_count_enable", arduino->params().turn_count_enable);
-  AppParams::saveParam(this, "Arduino", "current_voltage", arduino->params().current_voltage);
+  AppParams::saveParam(this, "Arduino", "ip", _arduino->params().ip);
+  AppParams::saveParam(this, "Arduino", "port", _arduino->params().port);
+  AppParams::saveParam(this, "Arduino", "spin_clockwise", _arduino->params().spin_clockwise);
+  AppParams::saveParam(this, "Arduino", "engine_pw", _arduino->params().engine_pw);
+  AppParams::saveParam(this, "Arduino", "state_period", _arduino->params().state_period);
+  AppParams::saveParam(this, "Arduino", "state_period_enable", _arduino->params().state_period_enable);
+  AppParams::saveParam(this, "Arduino", "turn_angle", _arduino->params().turn_angle);
+  AppParams::saveParam(this, "Arduino", "turn_angle_enable", _arduino->params().turn_angle_enable);
+  AppParams::saveParam(this, "Arduino", "turn_count", _arduino->params().turn_count);
+  AppParams::saveParam(this, "Arduino", "turn_count_enable", _arduino->params().turn_count_enable);
+  AppParams::saveParam(this, "Arduino", "current_voltage", _arduino->params().current_voltage);
   
   
   delete ui;
@@ -266,15 +263,16 @@ void MainWindow::on_bnCycle_clicked()
   QApplication::processEvents();
   
   // параметры окна графиков
-  _chp.x_tick_period = ui->spinTimer->value();
-  _chart_w->setParams(_chp);
+  _chart_params = _chart->params();
+  _chart_params.x_tick_period = ui->spinTimer->value();
+  _chart->setParams(_chart_params);
   
   if(!_thr)
   {
     /** синхронизация с Arduino **/
     if(ui->gbSynchronizeArduino->isChecked()) {
       
-      if(!arduino->start()) {
+      if(!_arduino->start()) {
         emit newState(false);
         return;
       }
@@ -288,9 +286,9 @@ void MainWindow::on_bnCycle_clicked()
       
     if (!handle)
     {
-      emit newState(false);
       libusb_exit(NULL);
       log << svlog::Time << svlog::Critical << "Device could not be open or found" << svlog::endl;
+      emit newState(false);
       return;
     }
      
@@ -308,16 +306,16 @@ void MainWindow::on_bnCycle_clicked()
   {
     /** синхронизация с Arduino **/
     if(ui->gbSynchronizeArduino->isChecked()) {
-      arduino->stop();
+      _arduino->stop();
     }
+
+    /** ВНИМАНИЕ здесь вызывается деструктор ~SvPullUsb() **/  
+    delete _thr; 
     
-//    tm.stop();
-    //    _thr->killTimer(_timerId);
-      _thr->stop();
-      _thr->deleteLater(); // 
-      delete _thr;
-      _thr = nullptr;
-      
+    qDebug() << 6;
+    _thr = nullptr;
+    qDebug() << "dsdsd";
+    
 #ifndef NO_USB_DEVICE
       libusb_release_interface(handle, 0); // отпускаем интерфейс 0
       libusb_close(handle);  // закрываем устройство
@@ -370,22 +368,22 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
     _calcs[svgraph::giVsnd] = 2 * L / ((t1 + t2) / 1000000000); // определяем скорость звука в среде, м/с.
     _calcs[svgraph::giVpot] = 3 * _calcs.value(svgraph::giVsnd) * (_calcs.value(svgraph::giTOFdiff) / (t1 + t2)); // определяем скорость потока, м/с.
     _calcs[svgraph::gitAvg] = (t1 + t2) / 2;
-    _calcs[svgraph::giTemperature] = arduino->currentTemperature();
-    _calcs[svgraph::giTurnByMinute] = arduino->currentTurnByMinute();
-    _calcs[svgraph::giAngleBySecond] = arduino->currentAngleBySecond();
+    _calcs[svgraph::giTemperature] = _arduino->currentTemperature();
+    _calcs[svgraph::giTurnByMinute] = _arduino->currentTurnByMinute();
+    _calcs[svgraph::giAngleBySecond] = _arduino->currentAngleBySecond();
     
-    for(int i = 0; i < _chart_w->graphList().count(); i++) {
+    for(int i = 0; i < _chart->graphList().count(); i++) {
       
-      svgraph::GraphIDs graph_id = _chart_w->graphList()[i];
+      svgraph::GraphIDs graph_id = _chart->graphList()[i];
       
-      _chart_w->appendData(graph_id, _calcs[graph_id]);
+      _chart->appendData(graph_id, _calcs[graph_id]);
       
       if(_file)
           _file->write((const char*)&_calcs[graph_id], sizeof(qreal));
       
     }
         
-    _chart_w->customplot()->replot();
+    _chart->customplot()->replot();
 
     if(ui->checkLog->isChecked())
       ui->textLog->append(QString("%1%2\tHit Up Avg: %3\tHit Down Avg: %4\tTOF diff: %5\tVpot: %6\tVsnd: %7")
@@ -412,8 +410,10 @@ void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *m
 
 SvPullUsb::~SvPullUsb()
 { 
+  qDebug() << 1;
   stop();
   deleteLater();
+  qDebug() << 4;
 }
 
 void SvPullUsb::run()
@@ -425,7 +425,7 @@ void SvPullUsb::run()
   {
     MUTEX1.lock();
     
-#ifdef NO_USB_DEVICE
+#ifdef NO_USB_DEVICE 
     pullusb::fres *result = new pullusb::fres;
     result->code = 0;
     result->data = (char*)malloc(sizeof(pullusb::MAX35101EV_ANSWER));
@@ -441,7 +441,6 @@ void SvPullUsb::run()
 #endif     
         
     MUTEX1.unlock();
-    
     if(result)
       emit new_data(result/*, &max_data*/); 
     
@@ -449,6 +448,7 @@ void SvPullUsb::run()
     
   }
   
+//  qDebug() << "_started" << _started;
   _finished = true;
   
 }
@@ -456,7 +456,9 @@ void SvPullUsb::run()
 void SvPullUsb::stop()
 {
   _started = false;
+  qDebug() << 2;
   while(!_finished) QApplication::processEvents();
+  qDebug() << 3;
 }
 
 /** ****************************************** **/
@@ -496,20 +498,20 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
           /* заголовок файла - сигнатура и кол-во графиков */
           FileHeader file_head;
           
-          file_head.graph_count = _chart_w->graphCount();
+          file_head.graph_count = _chart->graphCount();
           _file->write((const char*)&file_head, sizeof(FileHeader));
           
           /* параметры графиков */
-          for(int i = 0; i < _chart_w->graphList().count(); i++) {
+          for(int i = 0; i < _chart->graphList().count(); i++) {
             
-            svgraph::GraphIDs graph_id = _chart_w->graphList()[i];
+            svgraph::GraphIDs graph_id = _chart->graphList()[i];
             
             GraphHeader graph_head;
             graph_head.graph_id = graph_id;
            
-            graph_head.line_color = static_cast<quint32>(_chart_w->graphParams(graph_id).line_color.rgb());
-            graph_head.line_style = _chart_w->graphParams(graph_id).line_style;
-            graph_head.line_width = _chart_w->graphParams(graph_id).line_width;
+            graph_head.line_color = static_cast<quint32>(_chart->graphParams(graph_id).line_color.rgb());
+            graph_head.line_style = _chart->graphParams(graph_id).line_style;
+            graph_head.line_width = _chart->graphParams(graph_id).line_width;
             
             _file->write((const char*)&graph_head, sizeof(GraphHeader));
             
@@ -575,7 +577,7 @@ void MainWindow::on_bnOpenFile_clicked()
 //  }
   
   /* создаем окно для вывода графиков */
-  svchart::ChartParams p = _chart_w->chartParams();
+  svchart::ChartParams p = _chart->params();
   svchart::SvChartWidget *chart = new svchart::SvChartWidget(p);
   
   /* читаем количество графиков */
@@ -638,11 +640,11 @@ void MainWindow::on_bnAddGraph_clicked()
     svgraph::GraphIDs graph_id = p.type;
     
     /* если такой график уже есть, то ничего не добавляем */
-    if(_chart_w->findGraph(graph_id)) 
+    if(_chart->findGraph(graph_id)) 
       QMessageBox::information(this, "Info", "This type grap is already present", QMessageBox::Ok);
     
     else {
-      _chart_w->addGraph(graph_id, p);
+      _chart->addGraph(graph_id, p);
       _addGraphToList(graph_id, p);
     }
     
@@ -661,14 +663,14 @@ void MainWindow::on_bnEditGraph_clicked()
  
   svgraph::GraphIDs graph_id = static_cast<svgraph::GraphIDs>(ui->listGraphs->currentIndex().data(Qt::UserRole).toInt());
   
-  svgraph::GraphParams p = _chart_w->graphParams(graph_id);
+  svgraph::GraphParams p = _chart->graphParams(graph_id);
   
   svgraph::SvGraphParamsDialog* chDlg = new svgraph::SvGraphParamsDialog(0, &p);
   
   if(chDlg->exec() == QDialog::Accepted)
   {
     p = chDlg->graph_params;
-    _chart_w->setGraphParams(graph_id, p);
+    _chart->setGraphParams(graph_id, p);
     
     ui->listGraphs->currentItem()->setData(Qt::DecorationRole, p.line_color);
     
@@ -682,7 +684,7 @@ void MainWindow::on_bnRemoveGraph_clicked()
 {
     svgraph::GraphIDs graph_id = static_cast<svgraph::GraphIDs> (ui->listGraphs->currentIndex().data(Qt::UserRole).toInt());
     
-    _chart_w->removeGraph(graph_id);
+    _chart->removeGraph(graph_id);
     ui->listGraphs->takeItem(ui->listGraphs->currentRow());
     
     ui->bnEditGraph->setEnabled(ui->listGraphs->count() > 0);
@@ -702,7 +704,7 @@ void MainWindow::on_listGraphs_doubleClicked(const QModelIndex &index)
 
 void MainWindow::on_spinTimer_editingFinished()
 {
-  svarduinomax::SvArduinoWidgetParams ap = arduino->params();
+  svarduinomax::SvArduinoWidgetParams ap = _arduino->params();
   ap.state_period = ui->spinTimer->value();
-  arduino->setParams(ap);
+  _arduino->setParams(ap);
 }

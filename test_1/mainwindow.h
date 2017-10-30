@@ -124,17 +124,18 @@ private:
 //  svchart::Chart *_chart = nullptr;
 //  QChartView *chartView;
   
-  svchart::SvChartWidget *_chart_w = nullptr;
+  svchart::SvChartWidget *_chart = nullptr;
+  svchart::ChartParams _chart_params;
+  
   QMap<int, QString> _plot_types;
   
-  
-  svchart::ChartParams _chp;
 
   QFile *_file = nullptr;
   
   void _addGraphToList(int graph_id, svgraph::GraphParams &p);
   
-  svarduinomax::SvArduinoWidget *arduino;
+  svarduinomax::SvArduinoWidget *_arduino;
+  svarduinomax::SvArduinoWidgetParams _arduino_params;
   
   svtcp::SvTcpClient *_client;
   

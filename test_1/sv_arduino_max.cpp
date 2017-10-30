@@ -60,9 +60,9 @@ bool svarduinomax::SvArduinoWidget::start()
 {
   foreach (QWidget* wdg, this->findChildren<QWidget *>())
     wdg->setEnabled(false);
+  
   QApplication::processEvents();
   
-  bool result = true;
   try {
   
     _client->setIp(_params.ip);
@@ -75,16 +75,25 @@ bool svarduinomax::SvArduinoWidget::start()
     cmd += QString("SET:DIRECTION:%1;").arg(_params.spin_clockwise ? "CLOCKWISE" : "BACKWISE");
     cmd += QString("START");
     
+#ifndef NO_ARDUINO
+
     if(_client->connectToHost() != svtcp::SOCKET_OK) _exception.raise(_client->lastError());
     _client->sendData(cmd, 2000);
+    
+    if(_client->response()->status != svtcp::SOCKET_OK)
+      _exception.raise(_client->lastError());
+    
     if(_client->response()->data.contains(QByteArray("UNKNOWN_COMMAND")))   
       _exception.raise(QString("Неверная команда: %1").arg(QString(_client->response()->data).replace("UNKNOWN_COMMAND:", "")));
+    
+#endif
     
   }
   
   catch (SvException &e) {
-    result = false;
+    emit newState(false);
     _log << svlog::Time << svlog::Critical << e.err << svlog::endl;
+    return false;
   }
   
   _last_time = time(NULL);
@@ -93,12 +102,11 @@ bool svarduinomax::SvArduinoWidget::start()
   _current_turn_by_minute = 0;
   _current_angle_by_second = 0;
   
-//  _client->disconnectFromHost();
   _state_timer->setInterval(_params.state_period); // * 1000);
   _state_timer->start();
   
   emit newState(true);    
-  return result;
+  return true;
   
 }
 
@@ -115,6 +123,8 @@ bool svarduinomax::SvArduinoWidget::stop()
   
     _mux.lock();  
     
+#ifndef NO_ARDUINO
+    
     if(!_client->connected()) {
       if(_client->connectToHost() != svtcp::SOCKET_OK)
         _exception.raise(_client->lastError());
@@ -122,14 +132,16 @@ bool svarduinomax::SvArduinoWidget::stop()
     
     _client->sendData(QString("STOP"));
     
+    _client->disconnectFromHost();
+    
+#endif
     
   }
-    
+  
   catch (SvException &e) {
     _log << svlog::Time << svlog::Error << e.err << svlog::endl;
   }
   
-  _client->disconnectFromHost();
   _mux.unlock();
     
   emit newState(false);
@@ -147,6 +159,12 @@ void svarduinomax::SvArduinoWidget::pullSensors()
     
     _mux.lock();
     
+#ifdef NO_ARDUINO
+    
+    QStringList l = QString("CURRENT:TEMP:20;CURRENT:ENCODER:%1").arg(ui->sliderEnginePw->maximum() - _params.engine_pw + rand()%2 + 100).split(';');
+    
+#else
+
     if(!_client || !_client->connected()) 
       return;
     
@@ -167,11 +185,11 @@ void svarduinomax::SvArduinoWidget::pullSensors()
     
     if(_client->response()->status != svtcp::SOCKET_OK)
       _exception.raise(_client->lastError());
-      
     
-    QString resp = QString(_client->response()->data);
-//    qDebug() << resp;
-    QStringList l = resp.split(';');
+    QStringList l = QString(_client->response()->data).split(';');
+    
+#endif
+    
     _mux.unlock();
     
     time_t cur_time = time(NULL);
@@ -211,10 +229,15 @@ void svarduinomax::SvArduinoWidget::pullSensors()
       else if(state.startsWith("CURRENT:ENCODER:")) {
         QStringList v = state.split(':');
         quint32 _encoder = static_cast<QString>(v.last()).toUInt(&ok);
-        
+
         if(!ok) continue;
-//        if(_last_encoder) {
-          _current_angle_by_second = (1000.0 / qreal(_encoder)) * 18.0;
+          
+        _current_angle_by_second = (1000.0 / qreal(_encoder)) * 18.0;
+        
+#ifdef NO_ARDUINO
+        _current_angle_by_second /= 200;
+#endif
+          
           _current_turn_by_minute =  _current_angle_by_second * 60 / 360;
           _current_encoder = _encoder / 100.0;
 //        }
