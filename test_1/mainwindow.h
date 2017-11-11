@@ -34,6 +34,8 @@ QT_CHARTS_USE_NAMESPACE
 #include "../../svlib/sv_log.h"
 #include "../../svlib/sv_tcpserverclient.h"
 
+#include "sv_abstract_device_interface.h"
+
 //#define NO_USB_DEVICE
 
 namespace Ui {
@@ -117,7 +119,9 @@ private:
   
   QMap<int, QPair<uint16_t, uint16_t>> _devices;
   
-  SvPullUsb *_thr = nullptr;
+  svdevifc::SvDeviceInterface* _dev;
+//  SvPullUsb *_thr = nullptr;
+  
   int _timerId;
   
   pullusb::MAX35101EV_ANSWER _max_data;

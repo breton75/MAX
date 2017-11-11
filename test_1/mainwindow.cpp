@@ -267,7 +267,7 @@ void MainWindow::on_bnCycle_clicked()
   _chart_params.x_tick_period = ui->spinTimer->value();
   _chart->setParams(_chart_params);
   
-  if(!_thr)
+  if(!_dev)
   {
     /** синхронизация с Arduino **/
     if(ui->gbSynchronizeArduino->isChecked()) {
@@ -278,26 +278,17 @@ void MainWindow::on_bnCycle_clicked()
       }
     }
     
-#ifndef NO_USB_DEVICE  
-    libusb_context *ctx = NULL;  
-    libusb_init(NULL);  // инициализируем библиотеку
+   svdevifc::SupportedDevices devtype;
     
-    handle = libusb_open_device_with_vid_pid(ctx, _devices.value(ui->cbDevices->currentIndex()).first, _devices.value(ui->cbDevices->currentIndex()).second); // открываем устройство
-      
-    if (!handle)
-    {
-      libusb_exit(NULL);
-      log << svlog::Time << svlog::Critical << "Device could not be open or found" << svlog::endl;
-      emit newState(false);
-      return;
-    }
-     
-    libusb_claim_interface(handle, 0);  // запрашиваем интерфейс 0 для себя
+#ifdef NO_USB_DEVICE  
+  devtype = svdevifc::NoDevice;
+#else
+   devtype = svdevifc::MAX35101Evaluate;
 #endif
     
-    _thr = new SvPullUsb(handle, ui->spinTimer->value());
-    connect(_thr, SIGNAL(new_data(pullusb::fres*/*, pullusb::MAX35101EV_ANSWER**/)), this, SLOT(new_data(pullusb::fres*/*, pullusb::MAX35101EV_ANSWER**/)));
-    _thr->start();
+    _dev = new svdevifc::SvDeviceInterface(devtype);
+    connect(_dev, SIGNAL(new_data(svdevifc::MeasuredData )), this, SLOT(new_data(pullusb::fres*)));
+    _dev->start();
     
     emit newState(true);    
 
@@ -310,13 +301,11 @@ void MainWindow::on_bnCycle_clicked()
     }
 
     /** ВНИМАНИЕ здесь вызывается деструктор ~SvPullUsb() **/  
-    delete _thr; 
-    _thr = nullptr;
+    delete _dev; 
+    _dev = nullptr;
     
 #ifndef NO_USB_DEVICE
-      libusb_release_interface(handle, 0); // отпускаем интерфейс 0
-      libusb_close(handle);  // закрываем устройство
-      libusb_exit(NULL);  // завершаем работу с библиотекой  
+ 
 #endif
  
       emit newState(false);      
