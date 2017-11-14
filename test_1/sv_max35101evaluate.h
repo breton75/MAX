@@ -7,16 +7,19 @@
 #include <QMessageBox>
 #include <QByteArray>
 #include <QMutex>
+#include <QThread>
+#include <QtEndian>
+#include <QApplication>
 
 #include "libusb.h"
-#include "sv_abstract_device_interface.h"
+#include "sv_device_interface.h"
 
 #define MAX_BUF_SIZE 1024
 #define MAX35101EV_REQUEST_SIZE 64
 
 
 #pragma pack(push, 1)
-struct MAX35101EV_ANSWER{
+struct MAX35101EV_ANSWER {
   qint16 in1;
   qint32 hit1_up;
   qint32 hit2_up;
@@ -41,36 +44,76 @@ struct MAX35101EV_ANSWER{
 #pragma pack(push, 1)
 typedef struct{
   int code;
-  char *message;
+  char* message;
   char* data;
 } fres;
 #pragma pack(pop)
 
-fres *request(libusb_device_handle *handle);
-fres *pullData(libusb_device_handle *handle, QByteArray &ba);
+class SvPullMAX35101Evaluate;
 
 
-class SvMAX35101Evaluate : public SvAbstractDevice
+class SvMAX35101Evaluate : public svidev::SvIDevice
 {
   Q_OBJECT
   
 public:
-  SvMAX35101Evaluate();
+  explicit SvMAX35101Evaluate(svidev::DeviceInfo deviceInfo, QObject *parent = 0);
+  
   ~SvMAX35101Evaluate();
   
-  bool open() Q_DECL_OVERRIDE;
-  bool start(int msecs) Q_DECL_OVERRIDE;
-  bool stop() Q_DECL_OVERRIDE;
+  bool open();
+  void close();
   
-  QString lastError() Q_DECL_OVERRIDE { return _last_error; }
+  bool start(quint32 msecs);
+  bool stop();
   
 private:
   libusb_device_handle* _handle = nullptr;
   
-  QString _last_error = "";
+  SvPullMAX35101Evaluate* _thr = nullptr;
   
 signals:
-  void new_data(svdevifc::MeasuredData data);
+//  void new_data(svidev::MeasuredData data);
+  
+};
+
+
+class SvPullMAX35101Evaluate: public QThread
+{
+    Q_OBJECT
+  
+public:
+  explicit SvPullMAX35101Evaluate(libusb_device_handle *handle, quint32 timeout, QMutex *mutex)
+  {
+    _handle = handle;
+    _timeout = timeout;
+    _mutex = mutex;
+  }
+  
+  ~SvPullMAX35101Evaluate();
+
+  void stop();
+  
+  MAX35101EV_ANSWER max_data;
+  
+  
+protected:
+//  void timerEvent(QTimerEvent *te);
+  
+private:
+  void run() Q_DECL_OVERRIDE;
+
+  fres* pullData(QByteArray &ba);
+  
+  bool _started;
+  bool _finished;
+  quint32 _timeout;
+  libusb_device_handle* _handle;
+  
+  QMutex* _mutex;
+  
+signals:
+  void new_data(svidev::MeasuredData data);
   
 };
 

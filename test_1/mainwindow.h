@@ -9,7 +9,6 @@
 #include <QByteArray>
 #include <QMutex>
 #include <QThread>
-#include <QtEndian>
 #include <QComboBox>
 #include <QRgb>
 #include <QTime>
@@ -24,7 +23,7 @@
 QT_CHARTS_USE_NAMESPACE
 
 #include "libusb.h"
-#include "pull_usb.h"
+//#include "pull_usb.h"
 #include "sv_chartwidget.h"
 #include "sv_graph.h"
 #include "sv_arduino_max.h"
@@ -34,7 +33,8 @@ QT_CHARTS_USE_NAMESPACE
 #include "../../svlib/sv_log.h"
 #include "../../svlib/sv_tcpserverclient.h"
 
-#include "sv_abstract_device_interface.h"
+#include "sv_device_interface.h"
+#include "sv_max35101evaluate.h"
 
 //#define NO_USB_DEVICE
 
@@ -70,9 +70,12 @@ struct GraphHeader {
 };
 #pragma pack(pop)
 
+#define L 0.0895 // расстояние между излучателями в метрах
+
+
 /** ************************ **/
 
-class SvPullUsb;
+//class SvPullUsb;
 
 class MainWindow : public QMainWindow
 {
@@ -94,7 +97,7 @@ private slots:
   void on_bnOneShot_clicked();
   void on_bnCycle_clicked();
   
-  void new_data(pullusb::fres *result);
+  void new_data(svidev::MeasuredData data);
   
 //  void on_checkSaveToFile_clicked(bool checked);
   void on_bnSaveFileSelectPath_clicked();
@@ -119,12 +122,12 @@ private:
   
   QMap<int, QPair<uint16_t, uint16_t>> _devices;
   
-  svdevifc::SvDeviceInterface* _dev;
+  svidev::SvIDevice* _dev;
 //  SvPullUsb *_thr = nullptr;
   
   int _timerId;
   
-  pullusb::MAX35101EV_ANSWER _max_data;
+//  pullusb::MAX35101EV_ANSWER _max_data;
   
   QMap<svgraph::GraphIDs, qreal> _calcs;
   
@@ -148,44 +151,46 @@ private:
   
   quint32 _tick_count = 0;
   
+  svidev::SvIDevice* _device = nullptr;
+  
 signals:
   newState(bool state);
   
 };
 
 
-class SvPullUsb: public QThread
-{
-    Q_OBJECT
+//class SvPullUsb: public QThread
+//{
+//    Q_OBJECT
   
-public:
-  explicit SvPullUsb(libusb_device_handle *handle, quint32 timeout)
-  {
-    _handle = handle;
-    _timeout = timeout;
-  }
+//public:
+//  explicit SvPullUsb(libusb_device_handle *handle, quint32 timeout)
+//  {
+//    _handle = handle;
+//    _timeout = timeout;
+//  }
   
-  ~SvPullUsb();
+//  ~SvPullUsb();
 
-  void stop();
+//  void stop();
   
-  pullusb::MAX35101EV_ANSWER max_data;
+//  pullusb::MAX35101EV_ANSWER max_data;
   
   
-protected:
-//  void timerEvent(QTimerEvent *te);
+//protected:
+////  void timerEvent(QTimerEvent *te);
   
-private:
-  void run() Q_DECL_OVERRIDE;
+//private:
+//  void run() Q_DECL_OVERRIDE;
   
-  bool _started;
-  bool _finished;
-  quint32 _timeout;
-  libusb_device_handle* _handle;
+//  bool _started;
+//  bool _finished;
+//  quint32 _timeout;
+//  libusb_device_handle* _handle;
   
-signals:
-  void new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *max_data*/);
+//signals:
+//  void new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *max_data*/);
   
-};
+//};
 
 #endif // MAINWINDOW_H

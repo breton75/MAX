@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>402</width>
+    <width>401</width>
     <height>754</height>
    </rect>
   </property>
@@ -24,7 +24,7 @@
        </font>
       </property>
       <property name="title">
-       <string>MAX 35101 EVALUATE</string>
+       <string>Выберите устройство</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
@@ -564,7 +564,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>402</width>
+     <width>401</width>
      <height>21</height>
     </rect>
    </property>

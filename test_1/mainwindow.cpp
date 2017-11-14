@@ -114,18 +114,18 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
   /* завершаем работу с платой */
-  if(_thr)
-  {
-    /** ВНИМАНИЕ здесь вызывается деструктор ~SvPullUsb() **/  
-    delete _thr;
-    _thr = nullptr;
+//  if(_thr)
+//  {
+//    /** ВНИМАНИЕ здесь вызывается деструктор ~SvPullUsb() **/  
+//    delete _thr;
+//    _thr = nullptr;
     
-#ifndef NO_USB_DEVICE
-    libusb_release_interface(handle, 0); // отпускаем интерфейс 0
-    libusb_close(handle);  // закрываем устройство
-    libusb_exit(NULL);  // завершаем работу с библиотекой  
-#endif
-  }
+//#ifndef NO_USB_DEVICE
+//    libusb_release_interface(handle, 0); // отпускаем интерфейс 0
+//    libusb_close(handle);  // закрываем устройство
+//    libusb_exit(NULL);  // завершаем работу с библиотекой  
+//#endif
+//  }
   
   /* сохраняем парметры программы */
   AppParams::saveWindowParams(this, this->size(), this->pos(), this->windowState());
@@ -237,10 +237,10 @@ void MainWindow::on_bnOneShot_clicked()
 //  pullusb::MAX35101EV_ANSWER max_data;
   
   MUTEX1.lock();
-  pullusb::fres *result = pullusb::request(handle/*, max_data*/);
+//  pullusb::fres *result = pullusb::request(handle/*, max_data*/);
   MUTEX1.unlock();
   
-  emit new_data(result/*, &max_data*/);
+//  emit new_data(result/*, &max_data*/);
 
   
   libusb_release_interface(handle, 0); // отпускаем интерфейс 0
@@ -278,17 +278,22 @@ void MainWindow::on_bnCycle_clicked()
       }
     }
     
-   svdevifc::SupportedDevices devtype;
+    svidev::DeviceInfo dinfo;
+//    dinfo.
+    svidev::SupportedDevices devtype;
     
 #ifdef NO_USB_DEVICE  
-  devtype = svdevifc::NoDevice;
+  devtype = svidev::NoDevice;
 #else
-   devtype = svdevifc::MAX35101Evaluate;
+    
+   _device = new SvMAX35101Evaluate();
+   _device
+   
 #endif
     
-    _dev = new svdevifc::SvDeviceInterface(devtype);
-    connect(_dev, SIGNAL(new_data(svdevifc::MeasuredData )), this, SLOT(new_data(pullusb::fres*)));
-    _dev->start();
+    _dev = new SvMAX35101Evaluate(dinfo);
+    connect(_dev, SIGNAL(new_data(svidev::MeasuredData )), this, SLOT(new_data(svidev::MeasuredData )));
+    _dev->start(ui->spinTimer->value());
     
     emit newState(true);    
 
@@ -336,113 +341,43 @@ void MainWindow::stateChanged(bool state)
   
 }
 
-void MainWindow::new_data(pullusb::fres *result/*, pullusb::MAX35101EV_ANSWER *max_data*/)
+void MainWindow::new_data(svidev::MeasuredData data)
 {
-  if(result->code == 0)
-  {
-    MUTEX1.lock();
+  _dev->mutex.lock();
 
-    memcpy(&_max_data, result->data, sizeof(pullusb::MAX35101EV_ANSWER));
+  /** вычисляем значения **/
+  _calcs[svgraph::giTOFdiff] = data.tof1 - data.tof2;
+  _calcs[svgraph::giVsnd] = 2 * L / ((data.tof1 + data.tof2) / 1000000000); // определяем скорость звука в среде, м/с.
+  _calcs[svgraph::giVpot] = 3 * _calcs.value(svgraph::giVsnd) * (_calcs.value(svgraph::giTOFdiff) / (data.tof1 + data.tof2)); // определяем скорость потока, м/с.
+  _calcs[svgraph::gitAvg] = (data.tof1 + data.tof2) / 2;
+  _calcs[svgraph::giTemperature] = _arduino->currentTemperature();
+  _calcs[svgraph::giTurnByMinute] = _arduino->currentTurnByMinute();
+  _calcs[svgraph::giAngleBySecond] = _arduino->currentAngleBySecond();
+  
+  for(int i = 0; i < _chart->graphList().count(); i++) {
     
-    /** ******************************* **/
-    qreal t1 = qFromBigEndian<qint32>(_max_data.hit_up_average) / 262.14;   // время пролета 1, в нс.
-    qreal t2 = qFromBigEndian<qint32>(_max_data.hit_down_average) / 262.14; // время пролета 2, в нс.
-    qreal L = 0.0895; // расстояние между излучателями в метрах
-
-    /** вычисляем значения **/
-    _calcs[svgraph::giTOFdiff] = t1 - t2;
-    _calcs[svgraph::giVsnd] = 2 * L / ((t1 + t2) / 1000000000); // определяем скорость звука в среде, м/с.
-    _calcs[svgraph::giVpot] = 3 * _calcs.value(svgraph::giVsnd) * (_calcs.value(svgraph::giTOFdiff) / (t1 + t2)); // определяем скорость потока, м/с.
-    _calcs[svgraph::gitAvg] = (t1 + t2) / 2;
-    _calcs[svgraph::giTemperature] = _arduino->currentTemperature();
-    _calcs[svgraph::giTurnByMinute] = _arduino->currentTurnByMinute();
-    _calcs[svgraph::giAngleBySecond] = _arduino->currentAngleBySecond();
+    svgraph::GraphIDs graph_id = _chart->graphList()[i];
     
-    for(int i = 0; i < _chart->graphList().count(); i++) {
-      
-      svgraph::GraphIDs graph_id = _chart->graphList()[i];
-      
-      _chart->appendData(graph_id, _calcs[graph_id]);
-      
-      if(_file)
-          _file->write((const char*)&_calcs[graph_id], sizeof(qreal));
-      
-    }
-        
-    _chart->customplot()->replot();
-
-    if(ui->checkLog->isChecked())
-      ui->textLog->append(QString("%1%2\tHit Up Avg: %3\tHit Down Avg: %4\tTOF diff: %5\tVpot: %6\tVsnd: %7")
-                          .arg(_tick_count++)
-                          .arg(QTime::currentTime().toString("mm:ss.zzz"))
-                          .arg(t1).arg(t2).arg(_calcs.value(svgraph::giTOFdiff), 0, 'f', 6)
-                          .arg(_calcs.value(svgraph::giVpot), 0, 'f', 3)
-                          .arg(_calcs.value(svgraph::giVsnd), 0, 'f', 4));
-      
-    MUTEX1.unlock();
+    _chart->appendData(graph_id, _calcs[graph_id]);
+    
+    if(_file)
+        _file->write((const char*)&_calcs[graph_id], sizeof(qreal));
     
   }
-  else
-  {
-    ui->textLog->append(QString("Error: %1").arg(QString(result->message)));
-  }
-  
-  delete result;
+      
+  _chart->customplot()->replot();
+
+  if(ui->checkLog->isChecked())
+    ui->textLog->append(QString("%1%2\tHit Up Avg: %3\tHit Down Avg: %4\tTOF diff: %5\tVpot: %6\tVsnd: %7")
+                        .arg(_tick_count++)
+                        .arg(QTime::currentTime().toString("mm:ss.zzz"))
+                        .arg(data.tof1).arg(data.tof2).arg(_calcs.value(svgraph::giTOFdiff), 0, 'f', 6)
+                        .arg(_calcs.value(svgraph::giVpot), 0, 'f', 3)
+                        .arg(_calcs.value(svgraph::giVsnd), 0, 'f', 4));
+    
+  _dev->mutex.unlock();
   
 }
-
-
-/** ******************************* **/
-
-SvPullUsb::~SvPullUsb()
-{ 
-  stop();
-  deleteLater();
-}
-
-void SvPullUsb::run()
-{
-  _started = true;
-  _finished = false;
-  
-  while(_started)
-  {
-    MUTEX1.lock();
-    
-#ifdef NO_USB_DEVICE 
-    pullusb::fres *result = new pullusb::fres;
-    result->code = 0;
-    result->data = (char*)malloc(sizeof(pullusb::MAX35101EV_ANSWER));
-    
-    pullusb::MAX35101EV_ANSWER a;
-//    qDebug() << rand();
-    qToBigEndian(((rand()%10 + 1) / 10.0) * 78000, &a.hit_up_average);
-    qToBigEndian(((rand()%10 + 2) / 10.0) * 78000, &a.hit_down_average);
-     
-     memcpy(result->data, &a, sizeof(pullusb::MAX35101EV_ANSWER));
-#else
-    pullusb::fres *result = pullusb::request(_handle/*, max_data*/);
-#endif     
-        
-    MUTEX1.unlock();
-    if(result)
-      emit new_data(result/*, &max_data*/); 
-    
-    msleep(_timeout);
-    
-  }
-  
-  _finished = true;
-  
-}
-
-void SvPullUsb::stop()
-{
-  _started = false;
-  while(!_finished) QApplication::processEvents();
-}
-
-/** ****************************************** **/
 
 void MainWindow::on_bnSaveToFile_clicked(bool checked)
 {
