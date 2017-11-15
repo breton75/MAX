@@ -42,7 +42,9 @@ SOURCES += main.cpp\
     ../../svlib/sv_secondmeter.cpp \
     ../../svlib/sv_tcpserverclient.cpp \
     sv_max35101evaluate.cpp \
-    sv_virtual_device.cpp
+    sv_virtual_device.cpp \
+    ../../svlib/sv_sqlite.cpp \
+    sv_device_interface.cpp
 
 
 HEADERS  += mainwindow.h \
@@ -59,12 +61,13 @@ HEADERS  += mainwindow.h \
     ../../svlib/sv_tcpserverclient.h \
     sv_max35101evaluate.h \
     sv_virtual_device.h \
-    sv_device_interface.h
+    sv_device_interface.h \
+    ../../svlib/sv_sqlite.h
 
 FORMS    += mainwindow.ui \
     sv_graphparamsdialog.ui \
     engine_control.ui \
-    sv_device.ui
+    sv_device_editor.ui
 
 win32: LIBS += -L$$PWD/../../libusb-1.0.21/MinGW32/dll/ -llibusb-1.0
 

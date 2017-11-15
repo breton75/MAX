@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>SvTaskDialog</class>
- <widget class="QDialog" name="SvTaskDialog">
+ <class>SvDeviceEditorDialog</class>
+ <widget class="QDialog" name="SvDeviceEditorDialog">
   <property name="geometry">
    <rect>
     <x>0</x>

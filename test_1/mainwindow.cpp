@@ -286,8 +286,8 @@ void MainWindow::on_bnCycle_clicked()
   devtype = svidev::NoDevice;
 #else
     
-   _device = new SvMAX35101Evaluate();
-   _device
+   _device = new SvMAX35101Evaluate(dinfo);
+//   _device
    
 #endif
     
