@@ -119,9 +119,10 @@ bool svarduinomax::SvArduinoWidget::stop()
   
   _state_timer->stop();
   
+//  _mux.lock();  
+  
   try {
   
-    _mux.lock();  
     
 #ifndef NO_ARDUINO
     
@@ -142,7 +143,7 @@ bool svarduinomax::SvArduinoWidget::stop()
     _log << svlog::Time << svlog::Error << e.err << svlog::endl;
   }
   
-  _mux.unlock();
+//  _mux.unlock();
     
   emit newState(false);
   
@@ -157,7 +158,6 @@ void svarduinomax::SvArduinoWidget::pullSensors()
 //    _client->setIp(_params.ip);
 //    _client->setPort(_params.port);  
     
-    _mux.lock();
     
 #ifdef NO_ARDUINO
     
@@ -172,6 +172,8 @@ void svarduinomax::SvArduinoWidget::pullSensors()
 //      if(_client->connectToHost() != svtcp::SOCKET_OK)
 //        _exception.raise(_client->lastError());
 //    }
+    
+    _mux.lock();
     
     int flags = _client->logFlags();
     _client->setFlags(svtcp::NoLog);
@@ -188,9 +190,10 @@ void svarduinomax::SvArduinoWidget::pullSensors()
     
     QStringList l = QString(_client->response()->data).split(';');
     
+    _mux.unlock();
+    
 #endif
     
-    _mux.unlock();
     
     time_t cur_time = time(NULL);
     

@@ -121,9 +121,11 @@ MainWindow::~MainWindow()
     _thr = nullptr;
     
 #ifndef NO_USB_DEVICE
-    libusb_release_interface(handle, 0); // отпускаем интерфейс 0
-    libusb_close(handle);  // закрываем устройство
-    libusb_exit(NULL);  // завершаем работу с библиотекой  
+    if(handle) {
+      libusb_release_interface(handle, 0); // отпускаем интерфейс 0
+      libusb_close(handle);  // закрываем устройство
+      libusb_exit(NULL);  // завершаем работу с библиотекой  
+    }
 #endif
   }
   
@@ -131,7 +133,7 @@ MainWindow::~MainWindow()
   AppParams::saveWindowParams(this, this->size(), this->pos(), this->windowState());
   AppParams::saveWindowParams(ui->dockPlot, ui->dockPlot->size(), ui->dockPlot->pos(), ui->dockPlot->windowState(), "PLOT WINDOW");
   AppParams::saveWindowParams(ui->dockArduino, ui->dockArduino->size(), ui->dockArduino->pos(), ui->dockArduino->windowState(), "ARDUINO WINDOW");
-  
+ 
   AppParams::saveParam(this, "General", "RequestTimer", ui->spinTimer->value());
   AppParams::saveParam(this, "General", "Log", ui->checkLog->isChecked());
   AppParams::saveParam(this, "General", "LastDeviceName", ui->cbDevices->currentText());
@@ -169,7 +171,6 @@ MainWindow::~MainWindow()
   AppParams::saveParam(this, "Arduino", "turn_count", _arduino->params().turn_count);
   AppParams::saveParam(this, "Arduino", "turn_count_enable", _arduino->params().turn_count_enable);
   AppParams::saveParam(this, "Arduino", "current_voltage", _arduino->params().current_voltage);
-  
   
   delete ui;
   
