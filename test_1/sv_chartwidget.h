@@ -46,6 +46,7 @@
 
 #include "sv_graph.h"
 
+const QString pBMP = "bmp";
 
 namespace svchart {
 
@@ -186,6 +187,7 @@ private:
     QSpacerItem *hspacer5;
     QComboBox *cbXAutoScroll;
     QComboBox *cbXMeasureUnit;
+    QPushButton *bnSaveToBmp;
     QHBoxLayout *hlay2;
     QFrame *frameYRange;
     QVBoxLayout *vlayYRange;
@@ -213,6 +215,7 @@ private slots:
     void on_bnResetChart_clicked();
     void on_bnYAutoscale_clicked(bool checked);
     void on_cbXAutoScroll_currentIndexChanged(int index);
+    void on_bnSaveToBmp_clicked();
 //    void on_cbXMeasureUnit_currentIndexChanged(int index);
     
 //    void setXRange(double lower, double upper);

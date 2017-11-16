@@ -461,7 +461,7 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
     if(checked) {
 
         svfnt::SvRE re(QDateTime::currentDateTime());
-        re.relist << qMakePair(svfnt::RE_EXT, FILE_EXT);
+        re.relist << qMakePair(svfnt::RE_EXT, pFRS);
         
         QString s = svfnt::get_file_path(ui->editSaveFilePath->text(), ui->editSaveFileNameTemplate->text(), re);
         if(s.isEmpty()) {
@@ -469,10 +469,12 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
             ui->bnSaveToFile->setChecked(false);
             return;
         }
+        
+        if(!s.endsWith(QString(".%1").arg(pFRS))) s += QString(".%1").arg(pFRS);
 
-        ui->bnSaveToFile->setText("Stop saving");
+        ui->bnSaveToFile->setText("Стоп");
         ui->bnSaveToFile->setStyleSheet("background-color: tomato");
-//        s += ("." + FILE_EXT);
+        
 
         MUTEX1.lock();
 
@@ -531,7 +533,7 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
         MUTEX1.unlock();
         
         ui->bnSaveToFile->setChecked(false);
-        ui->bnSaveToFile->setText("Save to file");
+        ui->bnSaveToFile->setText("Запись");
         ui->bnSaveToFile->setStyleSheet("");
         
     }
@@ -547,7 +549,7 @@ void MainWindow::on_bnSaveFileSelectPath_clicked()
 void MainWindow::on_bnOpenFile_clicked()
 {
   svfnt::SvRE re(QDateTime::currentDateTime());
-  re.relist << qMakePair(svfnt::RE_EXT, FILE_EXT);
+  re.relist << qMakePair(svfnt::RE_EXT, pFRS);
   
   QDir dir(svfnt::get_folder_path(ui->editSaveFilePath->text(), re));
   if(!dir.exists())
@@ -709,7 +711,7 @@ void MainWindow::on_spinTimer_editingFinished()
 void MainWindow::on_bnSaveBmp_clicked()
 {
   svfnt::SvRE re(QDateTime::currentDateTime());
-  re.relist << qMakePair(svfnt::RE_EXT, QString("bmp"));
+  re.relist << qMakePair(svfnt::RE_EXT, pBMP);
   
   QString s = svfnt::get_file_path(ui->editSaveFilePath->text(), ui->editSaveFileNameTemplate->text(), re);
   if(s.isEmpty()) {
@@ -717,14 +719,14 @@ void MainWindow::on_bnSaveBmp_clicked()
     return;
   }
 
-//  s += ".bmp";
+  if(!s.endsWith(QString(".%1").arg(pBMP))) s += QString(".%1").arg(pBMP); 
   
-    if(_chart->customplot()->saveBmp(s))
-      log << svlog::Time << svlog::Info
-          << QString("Файл %1 успешно сохранен.").arg(svfnt::replace_re(ui->editSaveFileNameTemplate->text(), re))
-          << svlog::endl;
-    else
-      log << svlog::Time << svlog::Info
-          << QString("Не удалось сохранить файл %1.").arg(svfnt::replace_re(ui->editSaveFileNameTemplate->text(), re))
-          << svlog::endl;
+  if(_chart->customplot()->saveBmp(s))
+    log << svlog::Time << svlog::Info
+        << QString("Файл %1 успешно сохранен.").arg(svfnt::replace_re(ui->editSaveFileNameTemplate->text(), re))
+        << svlog::endl;
+  else
+    log << svlog::Time << svlog::Info
+        << QString("Не удалось сохранить файл %1.").arg(svfnt::replace_re(ui->editSaveFileNameTemplate->text(), re))
+        << svlog::endl;
 }

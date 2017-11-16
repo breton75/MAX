@@ -119,20 +119,14 @@ bool svarduinomax::SvArduinoWidget::stop()
   
   _state_timer->stop();
   
-//  _mux.lock();  
+  while(_is_pulling) QApplication::processEvents();
   
   try {
-  
-    
+
 #ifndef NO_ARDUINO
     
-//    if(!_client->connected()) {
-//      if(_client->connectToHost() != svtcp::SOCKET_OK)
-//        _exception.raise(_client->lastError());
-//    }
-    
     if(!_client || !_client->connected()) 
-      return;
+      return false;
     
     _client->sendData(QString("STOP"));
     _client->disconnectFromHost();
@@ -157,10 +151,6 @@ void svarduinomax::SvArduinoWidget::pullSensors()
 {
   try {
   
-//    _client->setIp(_params.ip);
-//    _client->setPort(_params.port);  
-    
-    
 #ifdef NO_ARDUINO
     
     QStringList l = QString("CURRENT:TEMP:20;CURRENT:ENCODER:%1").arg(ui->sliderEnginePw->maximum() - _params.engine_pw + rand()%2 + 100).split(';');
@@ -170,12 +160,7 @@ void svarduinomax::SvArduinoWidget::pullSensors()
     if(!_client || !_client->connected()) 
       return;
     
-//    {
-//      if(_client->connectToHost() != svtcp::SOCKET_OK)
-//        _exception.raise(_client->lastError());
-//    }
-    
-    _mux.lock();
+    _is_pulling = true;
     
     int flags = _client->logFlags();
     _client->setFlags(svtcp::NoLog);
@@ -192,7 +177,7 @@ void svarduinomax::SvArduinoWidget::pullSensors()
     
     QStringList l = QString(_client->response()->data).split(';');
     
-    _mux.unlock();
+    _is_pulling = false;
     
 #endif
     

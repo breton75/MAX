@@ -1,5 +1,9 @@
 <RCC>
   <qresource prefix="/">
+    <file>icons/Record.ico</file>
+    <file>icons/bmp.ico</file>
+    <file>icons/Save.ico</file>
+    <file>icons/floppy-disk1.ico</file>
     <file>../../Common/Icons/Basic/Stats.ico</file>
     <file>../../Common/Icons/Basic/Folder open.ico</file>
     <file>../../Common/Icons/Basic/Ok2.ico</file>
@@ -13,6 +17,7 @@
     <file>../../Common/Icons/Basic/Pen.ico</file>
     <file>icons/arrow-left3.ico</file>
     <file>icons/arrow-right3.ico</file>
+    <file>icons/Image.ico</file>
     <file>icons/button-synchronize3.ico</file>
     <file>icons/chart-bar-up2.ico</file>
     <file>icons/oscilloscope3.ico</file>

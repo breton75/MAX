@@ -113,6 +113,7 @@ private:
   SvException _exception;
   
   QMutex _mux;
+  bool _is_pulling = false;
 
 //  QTimer _timer;
   

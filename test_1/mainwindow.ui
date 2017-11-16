@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>402</width>
+    <width>422</width>
     <height>754</height>
    </rect>
   </property>
@@ -385,7 +385,7 @@
             <bool>true</bool>
            </property>
            <property name="text">
-            <string>Сохранить</string>
+            <string>Запись</string>
            </property>
            <property name="checkable">
             <bool>true</bool>
@@ -564,7 +564,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>402</width>
+     <width>422</width>
      <height>21</height>
     </rect>
    </property>

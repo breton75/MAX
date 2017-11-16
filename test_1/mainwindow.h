@@ -76,7 +76,7 @@ class MainWindow : public QMainWindow
 {
   Q_OBJECT
   
-  const QString FILE_EXT = "frs";
+  const QString pFRS = "frs";
   
 public:
   explicit MainWindow(QWidget *parent = 0);

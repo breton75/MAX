@@ -206,6 +206,16 @@ void svchart::SvChartWidget::setupUi()
 //    cbXMeasureUnit->insertItem(2, ChartXMeasureUnits.value(svchart::xmuSecond), QVariant(svchart::xmuSecond));
 
     hlayXRange->addWidget(cbXMeasureUnit);
+    
+    bnSaveToBmp = new QPushButton(frameXRange);
+    bnSaveToBmp->setObjectName(QStringLiteral("bnSaveToBmp"));
+    bnSaveToBmp->setMaximumSize(QSize(25, 16777215));
+    QIcon icon7;
+    icon7.addFile(QStringLiteral(":/icons/Image.ico"), QSize(), QIcon::Normal, QIcon::Off);
+    bnSaveToBmp->setIcon(icon7);
+
+    hlayXRange->addWidget(bnSaveToBmp);
+    
 
     hlay1->addWidget(frameXRange);
 
@@ -573,4 +583,18 @@ void svchart::SvChartWidget::rangeChanged(QCPRange range)
   _customplot->xAxis->setLabel(QString("%1. Текущий диапазон: %2")
                                .arg(ChartXMeasureUnits.value(_params.x_measure_unit))
                                .arg(_customplot->xAxis->range().size()));
+}
+
+void svchart::SvChartWidget::on_bnSaveToBmp_clicked()
+{
+  QString s = QFileDialog::getSaveFileName(this, "Сохранение файла bmp", "", "Файлы bmp (*.bmp);;Все файлы (*.*)");
+
+  if(s.isEmpty())
+    return;
+  
+  if(!s.endsWith(QString(".%1").arg(pBMP))) s += QString(".%1").arg(pBMP);
+  
+  if(!customplot()->saveBmp(s))
+    QMessageBox::critical(this, "Ошибка", QString("Не удалось сохранить файл %1.").arg(QFile(s).fileName()), QMessageBox::Ok);
+
 }
