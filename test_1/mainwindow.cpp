@@ -459,8 +459,6 @@ void SvPullUsb::stop()
 void MainWindow::on_bnSaveToFile_clicked(bool checked)
 {
     if(checked) {
-        ui->bnSaveToFile->setText("Stop saving");
-        ui->bnSaveToFile->setStyleSheet("background-color: tomato");
 
         svfnt::SvRE re(QDateTime::currentDateTime());
         re.relist << qMakePair(svfnt::RE_EXT, FILE_EXT);
@@ -472,6 +470,8 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
             return;
         }
 
+        ui->bnSaveToFile->setText("Stop saving");
+        ui->bnSaveToFile->setStyleSheet("background-color: tomato");
 //        s += ("." + FILE_EXT);
 
         MUTEX1.lock();

@@ -126,13 +126,15 @@ bool svarduinomax::SvArduinoWidget::stop()
     
 #ifndef NO_ARDUINO
     
-    if(!_client->connected()) {
-      if(_client->connectToHost() != svtcp::SOCKET_OK)
-        _exception.raise(_client->lastError());
-    }
+//    if(!_client->connected()) {
+//      if(_client->connectToHost() != svtcp::SOCKET_OK)
+//        _exception.raise(_client->lastError());
+//    }
+    
+    if(!_client || !_client->connected()) 
+      return;
     
     _client->sendData(QString("STOP"));
-    
     _client->disconnectFromHost();
     
 #endif
