@@ -5,7 +5,9 @@
 //#include "../../svlib/sv_log.h"
 
 QMutex MUTEX1;
+extern SvSelectDeviceTypeDialog *SELECTDEVICETYPE_UI;
 
+/** ----------------  --------------- **/
 
 MainWindow::MainWindow(QWidget *parent) :
   QMainWindow(parent),
@@ -650,4 +652,33 @@ void MainWindow::on_bnSaveBmp_clicked()
       log << svlog::Time << svlog::Info
           << QString("Не удалось сохранить файл %1.").arg(svfnt::replace_re(ui->editSaveFileNameTemplate->text(), re))
           << svlog::endl;
+}
+
+void MainWindow::addNewDevice()
+{
+  // выбираем тип устройства
+  svidev::SupportedDevices dev_type = svidev::VirtualDevice;
+  
+  SELECTDEVICETYPE_UI = new svidev::SvSelectDeviceTypeDialog();
+  
+  if(SELECTDEVICETYPE_UI->exec() == QDialog::Accepted)
+    dev_type = SELECTDEVICETYPE_UI->type_id;
+  
+  else return;
+  
+  if(dev_type == svidev::VirtualDevice) {
+    log << svlog::Critical << svlog::Time
+        << QString("Нельзя добавить\"%1\"").arg(svidev::SupportedDevicesNames.value(dev_type))
+        << svlog::endl;
+  }
+  
+  switch (dev_type) {
+    case svidev::MAX35101EV:
+      
+      break;
+    default:
+      break;
+  }
+  
+  return result;
 }

@@ -17,6 +17,7 @@
 #define MAX_BUF_SIZE 1024
 #define MAX35101EV_REQUEST_SIZE 64
 
+#define SQL_NEW_DEVICE "insert into devices device_type, device_name, vendor_id, product_id, manufacturer_id, port values(%1, '%2_USB%3:%4', %5, %6, %7, %8)"
 
 #pragma pack(push, 1)
 struct MAX35101EV_ANSWER {
@@ -67,6 +68,8 @@ public:
   bool start(quint32 msecs);
   bool stop();
   
+  static void addNewDevice();
+   
 private:
   libusb_device_handle* _handle = nullptr;
   
@@ -77,6 +80,29 @@ signals:
   
 };
 
+
+/** ---------------  ---------------- **/
+
+class SvSelectDeviceDialog : public QDialog
+{
+  Q_OBJECT
+  
+public:
+  explicit SvSelectDeviceDialog(QWidget *parent = 0);
+  ~SvSelectDeviceDialog() { close(); delete ui; }
+  
+private:
+  void setupUi();
+  
+  svidev::DeviceInfo dinfo;
+  
+private slots:
+  void accept() Q_DECL_OVERRIDE;
+  
+};
+
+
+/** ----------------  ---------------- **/
 
 class SvPullMAX35101Evaluate: public QThread
 {

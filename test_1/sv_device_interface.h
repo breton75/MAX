@@ -9,12 +9,14 @@
 #include <QTextEdit>
 
 #include "ui_sv_device_editor.h"
+#include "ui_sv_select_device_type_dialog.h"
 
 #include "../../svlib/sv_sqlite.h"
 #include "../../svlib/sv_log.h"
 
 namespace Ui {
 class SvDeviceEditorDialog;
+class SvSelectDeviceTypeDialog;
 }
 
 #define SQL_SELECT_DEVICE "select id, device_type, vendor_id, product_id, "       \
@@ -40,7 +42,7 @@ namespace svidev {
   } MeasuredData;
 
   enum SupportedDevices {
-    NoDevice,
+    VirtualDevice,
     MAX35101EV,
     TDC1000_TDC7200EVM,
     AMEBuoy
@@ -57,14 +59,14 @@ namespace svidev {
   } DeviceInfo;
   
   const QMap<SupportedDevices, QString> SupportedDevicesNames = {
-            {NoDevice, "Виртуальное устройство"}, {MAX35101EV, "MAX35101EV"},
+            {VirtualDevice, "Виртуальное устройство"}, {MAX35101EV, "MAX35101EV"},
             {TDC1000_TDC7200EVM, "TDC1000_TDC7200EVM"}, {AMEBuoy, "Буй АМЭ"} };
   
   
 //  class SvDeviceInterface;
   class SvIDevice;
 
-  
+  class SvSelectDeviceTypeDialog;
   
 }
 
@@ -140,6 +142,27 @@ public slots:
   
 private slots:
   void setCurrentConnectionType(int index);
+  
+};
+
+
+/** ---------------  ---------------- **/
+
+class SvSelectDeviceTypeDialog : public QDialog
+{
+  Q_OBJECT
+  
+public:
+  explicit SvSelectDeviceTypeDialog(QWidget *parent = 0);
+  ~SvSelectDeviceTypeDialog() { close(); delete ui; }
+  
+private:
+  Ui::SvSelectDeviceTypeDialog *ui;
+  
+  svidev::SupportedDevices type_id;
+  
+private slots:
+  void accept() Q_DECL_OVERRIDE;
   
 };
 

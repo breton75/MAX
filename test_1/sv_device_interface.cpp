@@ -1,7 +1,73 @@
 #include "sv_device_interface.h"
 
 
-extern SvSQLITE *SQLITE;
+SvSQLITE *SQLITE;
+SvSelectDeviceTypeDialog *SELECTDEVICETYPE_UI;
+
+QSqlError openDb(QString dbFileName)
+{
+  /* читаем БД (план полета) */
+  SQLITE = new SvSQLITE(this, dbFileName);
+  
+  return SQLITE->connectToDB();
+  
+//  if(err.type() != QSqlError::NoError) {
+//    qDebug() << err.databaseText();
+//  }
+}
+
+QSqlError fillDeviceList(QComboBox *cb)
+{
+  QSqlQuery* q = new QSqlQuery(SQLITE->db);
+  
+  QSqlError err = SQLITE->execSQL(QString("select * from devices"), q);
+  
+  if(err.type() == QSqlError::NoError) {
+  
+    cb->clear();
+    
+    while(q->next())
+      cb->addItem(q->value("device_name").toString(), q->value("device_type").toInt());
+    
+  }
+ 
+  q->finish();
+  delete q;
+  
+  return err;
+  
+}
+
+QString fillDeviceInfo(int dbid, svidev::DeviceInfo &dinfo)
+{
+  QSqlQuery* q = new QSqlQuery(SQLITE->db);
+  
+  QSqlError err = SQLITE->execSQL(QString("select * from devices where dbid = %1").arg(dbid), q);
+  
+  if(err.type() == QSqlError::NoError) {
+    
+    q->first();
+    
+    dinfo.dbid = dbid;
+    dinfo.deviceType = q->value("device_type");
+    dinfo.idProduct = q->value("product_id");
+    dinfo.idVendor = q->value("vendor_id");
+    dinfo.iManufacturer = q->value("manufacturer_id");
+    dinfo.name = q->value("device_name");
+    dinfo.port = q->value("port");
+                       
+  } 
+  
+  q->finish();
+  delete q;
+  
+  return err;
+  
+}
+
+
+
+/** ---------------  ---------------- **/
 
 SvDeviceEditor::SvDeviceEditor(QTextEdit *logWidget, int dbid, QWidget *parent) :
   QDialog(parent),
@@ -162,4 +228,31 @@ void SvDeviceEditor::setCurrentConnectionType(int index)
       _curConnectionType = "";
       break;
   }
+}
+
+
+/** ---------  ------------ **/
+SvSelectDeviceTypeDialog::SvSelectDeviceTypeDialog(QWidget *parent) :
+  QDialog(parent),
+  ui(new Ui::SvSelectDeviceTypeDialog)
+{
+  ui->setupUi(this);
+  
+  for(svidev::SupportedDevices key: svidev::SupportedDevicesNames.keys())
+    ui->cbDeviceType->addItem(svidev::SupportedDevicesNames.value(key), int(key));
+  
+  connect(bnSelect, SIGNAL(pressed()), this, SLOT(accept()));
+  connect(bnCancel, SIGNAL(pressed()), this, SLOT(reject()));
+  
+  setModal(true);
+  show();
+  
+}
+
+void SvSelectDeviceTypeDialog::accept()
+{
+  type_id = static_cast<svidev::SupportedDevices>(ui->cbDeviceType->currentData().toInt());
+  
+  QDialog::accept();
+  
 }

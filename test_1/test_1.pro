@@ -44,7 +44,8 @@ SOURCES += main.cpp\
     sv_max35101evaluate.cpp \
     sv_virtual_device.cpp \
     ../../svlib/sv_sqlite.cpp \
-    sv_device_interface.cpp
+    sv_device_interface.cpp \
+    sv_select_device_type_dialog.cpp
 
 
 HEADERS  += mainwindow.h \
@@ -62,12 +63,14 @@ HEADERS  += mainwindow.h \
     sv_max35101evaluate.h \
     sv_virtual_device.h \
     sv_device_interface.h \
-    ../../svlib/sv_sqlite.h
+    ../../svlib/sv_sqlite.h \
+    sv_select_device_type_dialog.h
 
 FORMS    += mainwindow.ui \
     sv_graphparamsdialog.ui \
     engine_control.ui \
-    sv_device_editor.ui
+    sv_device_editor.ui \
+    sv_select_device_type_dialog.ui
 
 win32: LIBS += -L$$PWD/../../libusb-1.0.21/MinGW32/dll/ -llibusb-1.0
 

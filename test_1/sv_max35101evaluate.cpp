@@ -1,5 +1,7 @@
 #include "sv_max35101evaluate.h"
 
+extern SvSQLITE *SQLITE;
+
 SvMAX35101Evaluate::SvMAX35101Evaluate(svidev::DeviceInfo deviceInfo, QObject *parent)
 {
   setDeviceInfo(deviceInfo);
@@ -74,6 +76,62 @@ bool SvMAX35101Evaluate::stop()
     delete _thr;
   
   _thr = nullptr;
+}
+
+static void SvMAX35101Evaluate::addNewDevice()
+{
+  uint16_t vendor_id;
+  uint16_t product_id;
+  
+  /* показываем форму выбора устройства USB */
+  SvSelectDeviceDialog *sdDlg = new SvSelectDeviceDialog();
+  
+  if(sdDlg->exec() != QDialog::accept())
+    return;
+  
+  тут выполняем проверку
+  
+  QSqlError err = SQLITE->execSQL(QString(SQL_NEW_DEVICE)
+                                  .arg(svidev::MAX35101EV)
+                                  .arg(svidev::SupportedDevicesNames.value(svidev::MAX35101EV))
+                                  .arg(vendor_id, 0, 16)
+                                  .arg(product_id, 0, 16)
+                                  .arg(vendor_id)
+                                  .arg(product_id)
+                                  .arg(-1)
+                                  .arg(-1));
+  
+  if(err.type() != QSqlError::NoError) {
+    QMessageBox::critical(0, "Ошибка", QString("Не удалось добавить новое устройство:\n%1").arg(err.databaseText()), QMessageBox::Ok);
+    return;
+  }
+ 
+  
+}
+
+/** ---------  ------------ **/
+SvSelectDeviceDialog::SvSelectDeviceDialog(QWidget *parent) :
+  QDialog(parent)
+{
+  setupUi();
+  
+  connect(bnSelect, SIGNAL(pressed()), this, SLOT(accept()));
+  connect(bnCancel, SIGNAL(pressed()), this, SLOT(reject()));
+  
+  setModal(true);
+  show();
+  
+}
+
+void SvSelectDeviceDialog::accept()
+{
+  svidev::DeviceInfo dinfo;
+  
+  dinfo.idVendor = ;
+  dinfo.idProduct = ;
+  
+  QDialog::accept();
+  
 }
 
 /** ******************************* **/

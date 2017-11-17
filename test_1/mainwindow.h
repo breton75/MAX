@@ -153,6 +153,8 @@ private:
   
   svidev::SvIDevice* _device = nullptr;
   
+  void addNewDevice();
+  
 signals:
   newState(bool state);
   
