@@ -5,7 +5,7 @@
 //#include "../../svlib/sv_log.h"
 
 QMutex MUTEX1;
-extern SvSelectDeviceTypeDialog *SELECTDEVICETYPE_UI;
+extern svidev::SvSelectDeviceType *SELECTDEVICETYPE_UI;
 
 /** ----------------  --------------- **/
 
@@ -19,7 +19,7 @@ MainWindow::MainWindow(QWidget *parent) :
   log = svlog::SvLog(ui->textLog);
   
   /* заполняем список устройств */
-  on_bnGetDeviceList_clicked();
+//  on_bnGetDeviceList_clicked();
   
  
 //  ui->cbViewType->addItem("Скорость м/с.");
@@ -177,49 +177,6 @@ MainWindow::~MainWindow()
   
 }
 
-void MainWindow::on_bnGetDeviceList_clicked()
-{
-  libusb_device **devs;
-	int r;
-	ssize_t cnt;
-
-	r = libusb_init(NULL);
-	if (r < 0)
-		return ;
-
-	cnt = libusb_get_device_list(NULL, &devs);
-	if (cnt < 0)
-		return ;
-  
-  libusb_device *dev;
-	int i = 0;
-
-	while ((dev = devs[i++]) != NULL) {
-		struct libusb_device_descriptor desc;
-		int r = libusb_get_device_descriptor(dev, &desc);
-		if (r < 0) {
-			qDebug() << "failed to get device descriptor";
-			return;
-		}
-    
-//    libusb_get_string_descriptor(dev,)
-    
-    QString devdesc = QString("%1:%2 (bus %3, device %4): %5")
-                      .arg(desc.idVendor, 0, 16)
-                      .arg(desc.idProduct, 0, 16)
-                      .arg(libusb_get_bus_number(dev))
-                      .arg(libusb_get_device_address(dev));
-    
-    ui->cbDevices->addItem(devdesc);
-    _devices.insert(ui->cbDevices->count() - 1, QPair<uint16_t, uint16_t>(desc.idVendor, desc.idProduct));
-  
-  }
-
-  libusb_free_device_list(devs, 1);
-	libusb_exit(NULL);
-  
-}
-
 void MainWindow::on_bnOneShot_clicked()
 {
   libusb_context *ctx = NULL;  
@@ -285,7 +242,7 @@ void MainWindow::on_bnCycle_clicked()
     svidev::SupportedDevices devtype;
     
 #ifdef NO_USB_DEVICE  
-  devtype = svidev::NoDevice;
+  devtype = svidev::VirtualDevice;
 #else
     
    _device = new SvMAX35101Evaluate(dinfo);
@@ -654,31 +611,39 @@ void MainWindow::on_bnSaveBmp_clicked()
           << svlog::endl;
 }
 
-void MainWindow::addNewDevice()
+void MainWindow::on_bnAddNewDevice_clicked()
 {
   // выбираем тип устройства
   svidev::SupportedDevices dev_type = svidev::VirtualDevice;
   
-  SELECTDEVICETYPE_UI = new svidev::SvSelectDeviceTypeDialog();
+  SELECTDEVICETYPE_UI = new svidev::SvSelectDeviceType();
   
-  if(SELECTDEVICETYPE_UI->exec() == QDialog::Accepted)
-    dev_type = SELECTDEVICETYPE_UI->type_id;
-  
-  else return;
-  
-  if(dev_type == svidev::VirtualDevice) {
-    log << svlog::Critical << svlog::Time
-        << QString("Нельзя добавить\"%1\"").arg(svidev::SupportedDevicesNames.value(dev_type))
-        << svlog::endl;
+  if(SELECTDEVICETYPE_UI->exec() != QDialog::Accepted) {
+    SELECTDEVICETYPE_UI->~SvSelectDeviceType();
+    return;
   }
   
+  dev_type = SELECTDEVICETYPE_UI->type_id;
+  SELECTDEVICETYPE_UI->~SvSelectDeviceType();
+  
   switch (dev_type) {
+    case svidev::VirtualDevice:
+    {
+      log << svlog::Critical << svlog::Time
+        << QString("Нельзя добавить\"%1\"").arg(svidev::SupportedDevicesNames.value(dev_type))
+        << svlog::endl;
+    }
+  
     case svidev::MAX35101EV:
-      
+      SvMAX35101Evaluate::addNewDevice();
       break;
+      
     default:
       break;
   }
-  
-  return result;
+}
+
+void MainWindow::on_bnRemoveDevice_clicked()
+{
+    
 }

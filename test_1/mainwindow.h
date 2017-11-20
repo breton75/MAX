@@ -93,7 +93,7 @@ public:
   svlog::SvLog log;
   
 private slots:
-  void on_bnGetDeviceList_clicked();
+//  void on_bnGetDeviceList_clicked();
   void on_bnOneShot_clicked();
   void on_bnCycle_clicked();
   
@@ -116,6 +116,10 @@ private slots:
   void onChartReset() { _tick_count = 0; }
   
   void on_bnSaveBmp_clicked();
+  
+  void on_bnAddNewDevice_clicked();
+  
+  void on_bnRemoveDevice_clicked();
   
 private:
   Ui::MainWindow *ui;
@@ -153,7 +157,7 @@ private:
   
   svidev::SvIDevice* _device = nullptr;
   
-  void addNewDevice();
+//  void addNewDevice();
   
 signals:
   newState(bool state);

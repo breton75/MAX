@@ -19,6 +19,7 @@ class SvDeviceEditorDialog;
 class SvSelectDeviceTypeDialog;
 }
 
+
 #define SQL_SELECT_DEVICE "select id, device_type, vendor_id, product_id, "       \
                           "       manufacturer_id, port, date_time, description " \
                           "from devices where id = %1"
@@ -66,7 +67,7 @@ namespace svidev {
 //  class SvDeviceInterface;
   class SvIDevice;
 
-  class SvSelectDeviceTypeDialog;
+  class SvSelectDeviceType;
   
 }
 
@@ -148,18 +149,19 @@ private slots:
 
 /** ---------------  ---------------- **/
 
-class SvSelectDeviceTypeDialog : public QDialog
+class svidev::SvSelectDeviceType : public QDialog
 {
   Q_OBJECT
   
 public:
-  explicit SvSelectDeviceTypeDialog(QWidget *parent = 0);
-  ~SvSelectDeviceTypeDialog() { close(); delete ui; }
+  explicit SvSelectDeviceType(QWidget *parent = 0);
+  ~SvSelectDeviceType() { close(); delete ui; }
+  
+  svidev::SupportedDevices type_id;
   
 private:
   Ui::SvSelectDeviceTypeDialog *ui;
   
-  svidev::SupportedDevices type_id;
   
 private slots:
   void accept() Q_DECL_OVERRIDE;

@@ -1,6 +1,7 @@
 #include "sv_max35101evaluate.h"
 
 extern SvSQLITE *SQLITE;
+SvSelectMAX35101EvDevice *SELECTMAX35101EV_DEVICE;
 
 SvMAX35101Evaluate::SvMAX35101Evaluate(svidev::DeviceInfo deviceInfo, QObject *parent)
 {
@@ -78,18 +79,25 @@ bool SvMAX35101Evaluate::stop()
   _thr = nullptr;
 }
 
-static void SvMAX35101Evaluate::addNewDevice()
+void SvMAX35101Evaluate::addNewDevice()
 {
   uint16_t vendor_id;
   uint16_t product_id;
   
+  qDebug() << 1;
   /* показываем форму выбора устройства USB */
-  SvSelectDeviceDialog *sdDlg = new SvSelectDeviceDialog();
-  
-  if(sdDlg->exec() != QDialog::accept())
+  SvSelectMAX35101EvDevice *sdDlg = new SvSelectMAX35101EvDevice();
+  qDebug() << 2;
+  if(sdDlg->exec() != QDialog::Accepted) {
+    delete sdDlg;
     return;
+  }
   
-  тут выполняем проверку
+  vendor_id = sdDlg->dinfo.idVendor;
+  product_id = sdDlg->dinfo.idProduct;
+  
+  delete sdDlg;
+//  тут выполняем проверку
   
   QSqlError err = SQLITE->execSQL(QString(SQL_NEW_DEVICE)
                                   .arg(svidev::MAX35101EV)
@@ -110,27 +118,113 @@ static void SvMAX35101Evaluate::addNewDevice()
 }
 
 /** ---------  ------------ **/
-SvSelectDeviceDialog::SvSelectDeviceDialog(QWidget *parent) :
-  QDialog(parent)
+SvSelectMAX35101EvDevice::SvSelectMAX35101EvDevice(QWidget *parent) :
+  QDialog(parent),
+  ui(new Ui::SvSelectMAX35101DeviceDialog)
 {
-  setupUi();
   
-  connect(bnSelect, SIGNAL(pressed()), this, SLOT(accept()));
-  connect(bnCancel, SIGNAL(pressed()), this, SLOT(reject()));
+  ui->setupUi(this);
+  
+  on_bnUpdateDeviceList_clicked();
+  
+  connect(ui->bnOk, SIGNAL(pressed()), this, SLOT(accept()));
+  connect(ui->bnCancel, SIGNAL(pressed()), this, SLOT(reject()));
   
   setModal(true);
   show();
-  
+    
 }
 
-void SvSelectDeviceDialog::accept()
+void SvSelectMAX35101EvDevice::accept()
 {
   svidev::DeviceInfo dinfo;
   
-  dinfo.idVendor = ;
-  dinfo.idProduct = ;
+  dinfo.idVendor = _devices.value (ui->cbDevice->currentIndex()).first;
+  dinfo.idProduct = _devices.value(ui->cbDevice->currentIndex()).second;
   
   QDialog::accept();
+  
+}
+
+void SvSelectMAX35101EvDevice::on_bnUpdateDeviceList_clicked()
+{
+  libusb_device **devs;
+  libusb_device_handle *devHandle = NULL;
+	
+  int r;
+	ssize_t cnt;
+  unsigned char strDesc[256];  
+  
+	r = libusb_init(NULL);
+	if (r < 0)
+		return ;
+
+	cnt = libusb_get_device_list(NULL, &devs);
+	if (cnt < 0)
+		return ;
+  
+  libusb_device *dev;
+	int i = 0;
+
+  ui->cbDevice->clear();
+  
+	while ((dev = devs[i++]) != NULL) {
+		
+    if(devHandle != NULL) {
+      libusb_close(devHandle);
+      devHandle = NULL;
+    }
+    
+    struct libusb_device_descriptor desc;
+    
+		int r = libusb_get_device_descriptor(dev, &desc);
+		
+    if (r < 0) {
+			QMessageBox::critical(this, "Ошибка", "Failed to get device descriptor", QMessageBox::Ok);
+			continue;
+		}
+    
+    r = libusb_open (dev, &devHandle);
+    if (r != LIBUSB_SUCCESS)
+      continue;
+    
+    // Get the string associated with iManufacturer index.
+    if (desc.iManufacturer > 0) {
+      
+       r = libusb_get_string_descriptor_ascii(devHandle, desc.iManufacturer, strDesc, 256);
+       
+       if (r < 0)
+          continue;
+
+       qDebug() << "   iManufacturer" <<  strDesc;
+    }
+
+    //========================================================================
+    // Get string associated with iProduct index.
+    if (desc.iProduct > 0) {
+      
+       r = libusb_get_string_descriptor_ascii(devHandle, desc.iProduct, strDesc, 256);
+       
+       if (r < 0)
+          continue;
+
+       qDebug() << "   iProduct" << strDesc;
+    }
+    
+    
+    QString devdesc = QString("%1:%2 (bus %3, device %4)")
+                      .arg(desc.idVendor, 0, 16)
+                      .arg(desc.idProduct, 0, 16)
+                      .arg(libusb_get_bus_number(dev))
+                      .arg(libusb_get_device_address(dev));
+    
+    ui->cbDevice->addItem(devdesc);
+    _devices.insert(ui->cbDevice->count() - 1, QPair<uint16_t, uint16_t>(desc.idVendor, desc.idProduct));
+  
+  }
+
+  libusb_free_device_list(devs, 1);
+	libusb_exit(NULL);
   
 }
 

@@ -40,7 +40,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="bnGetDeviceList">
+          <widget class="QPushButton" name="bnAddNewDevice">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -54,7 +54,34 @@
             </font>
            </property>
            <property name="text">
-            <string>Обновить</string>
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="res.qrc">
+             <normaloff>:/icons/Health.ico</normaloff>:/icons/Health.ico</iconset>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="bnRemoveDevice">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="font">
+            <font>
+             <weight>50</weight>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset resource="res.qrc">
+             <normaloff>:/icons/Cancel.ico</normaloff>:/icons/Cancel.ico</iconset>
            </property>
           </widget>
          </item>

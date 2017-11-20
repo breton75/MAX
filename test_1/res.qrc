@@ -1,5 +1,7 @@
 <RCC>
   <qresource prefix="/">
+    <file>icons/Cancel.ico</file>
+    <file>icons/Health.ico</file>
     <file>../../Common/Icons/Basic/Stats.ico</file>
     <file>../../Common/Icons/Basic/Folder open.ico</file>
     <file>../../Common/Icons/Basic/Ok2.ico</file>
@@ -12,6 +14,7 @@
     <file>../../Common/Icons/Basic/Health.ico</file>
     <file>../../Common/Icons/Basic/Pen.ico</file>
     <file>icons/arrow-left3.ico</file>
+    <file>icons/Refresh.ico</file>
     <file>icons/arrow-right3.ico</file>
     <file>icons/button-synchronize3.ico</file>
     <file>icons/chart-bar-up2.ico</file>
