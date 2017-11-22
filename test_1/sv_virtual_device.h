@@ -22,7 +22,7 @@ class SvVirtualDevice : public svidev::SvIDevice
   Q_OBJECT
   
 public:
-  SvVirtualDevice();
+  SvVirtualDevice(svidev::DeviceInfo deviceInfo, QObject *parent = 0);
   ~SvVirtualDevice();
   
   bool open();
@@ -33,6 +33,9 @@ public:
     
 private:
   SvPullVirtualDevice* _thr = nullptr;
+  
+//signals:
+//  void new_data(svidev::MeasuredData data);
   
 };
 
@@ -62,7 +65,7 @@ private:
   QMutex* _mutex;
   
 signals:
-  void new_data(svidev::MeasuredData data);
+  void new_data(const svidev::MeasuredData& data);
   
 };
 

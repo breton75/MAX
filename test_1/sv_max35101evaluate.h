@@ -10,6 +10,7 @@
 #include <QThread>
 #include <QtEndian>
 #include <QApplication>
+#include <QDateTime>
 
 #include <QVBoxLayout>
 #include <QGroupBox>
@@ -28,10 +29,9 @@
 #define MAX_BUF_SIZE 1024
 #define MAX35101EV_REQUEST_SIZE 64
 
-#define SQL_NEW_DEVICE "insert into devices device_type, device_name, vendor_id, product_id, manufacturer_id, port values(%1, '%2_USB%3:%4', %5, %6, %7, %8)"
 
 namespace Ui {
-class SvSelectMAX35101DeviceDialog;
+class SvSelectMAX35101EVDeviceDialog;
 }
 
 
@@ -67,17 +67,17 @@ typedef struct{
 } fres;
 #pragma pack(pop)
 
-class SvPullMAX35101Evaluate;
+class SvPullMAX35101EV;
 
 
-class SvMAX35101Evaluate : public svidev::SvIDevice
+class SvMAX35101EV : public svidev::SvIDevice
 {
   Q_OBJECT
   
 public:
-  explicit SvMAX35101Evaluate(svidev::DeviceInfo deviceInfo, QObject *parent = 0);
+  explicit SvMAX35101EV(svidev::DeviceInfo deviceInfo, QObject *parent = 0);
   
-  ~SvMAX35101Evaluate();
+  ~SvMAX35101EV();
   
   bool open();
   void close();
@@ -85,12 +85,12 @@ public:
   bool start(quint32 msecs);
   bool stop();
   
-  static void addNewDevice();
+  static bool addNewDevice();
    
 private:
   libusb_device_handle* _handle = nullptr;
   
-  SvPullMAX35101Evaluate* _thr = nullptr;
+  SvPullMAX35101EV* _thr = nullptr;
   
 signals:
 //  void new_data(svidev::MeasuredData data);
@@ -100,19 +100,19 @@ signals:
 
 /** ---------------  ---------------- **/
 
-class SvSelectMAX35101EvDevice : public QDialog
+class SvSelectMAX35101EVDevice : public QDialog
 {
   Q_OBJECT
   
 public:
-  explicit SvSelectMAX35101EvDevice(QWidget *parent = 0);
-  ~SvSelectMAX35101EvDevice() { close(); deleteLater(); }
+  explicit SvSelectMAX35101EVDevice(QWidget *parent = 0);
+  ~SvSelectMAX35101EVDevice() { close(); deleteLater(); }
   
   svidev::DeviceInfo dinfo;
   
 private:
   
-  Ui::SvSelectMAX35101DeviceDialog *ui;
+  Ui::SvSelectMAX35101EVDeviceDialog *ui;
 //  void setupUi();
   
 //  QVBoxLayout *vlayMain;
@@ -139,19 +139,19 @@ private slots:
 
 /** ----------------  ---------------- **/
 
-class SvPullMAX35101Evaluate: public QThread
+class SvPullMAX35101EV: public QThread
 {
     Q_OBJECT
   
 public:
-  explicit SvPullMAX35101Evaluate(libusb_device_handle *handle, quint32 timeout, QMutex *mutex)
+  explicit SvPullMAX35101EV(libusb_device_handle *handle, quint32 timeout, QMutex *mutex)
   {
     _handle = handle;
     _timeout = timeout;
     _mutex = mutex;
   }
   
-  ~SvPullMAX35101Evaluate();
+  ~SvPullMAX35101EV();
 
   void stop();
   

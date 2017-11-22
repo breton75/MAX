@@ -69,7 +69,6 @@ HEADERS  += mainwindow.h \
 FORMS    += mainwindow.ui \
     sv_graphparamsdialog.ui \
     engine_control.ui \
-    sv_device_editor.ui \
     sv_select_device_type_dialog.ui \
     sv_select_max35101_device_dialog.ui
 

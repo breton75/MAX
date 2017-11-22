@@ -6,6 +6,7 @@
 
 QMutex MUTEX1;
 extern svidev::SvSelectDeviceType *SELECTDEVICETYPE_UI;
+extern SvSQLITE *SQLITE;
 
 /** ----------------  --------------- **/
 
@@ -19,12 +20,19 @@ MainWindow::MainWindow(QWidget *parent) :
   log = svlog::SvLog(ui->textLog);
   
   /* заполняем список устройств */
-//  on_bnGetDeviceList_clicked();
-  
- 
-//  ui->cbViewType->addItem("Скорость м/с.");
-//  ui->cbViewType->addItem("TOF diff нс.");
-//  ui->cbViewType->addItem("(t1 + t2) / 2");
+  QString dbpath = qApp->applicationDirPath() + '/' + qApp->applicationName() + ".db";
+  QSqlError err = svidev::open_db(dbpath);
+  if(err.type() != QSqlError::NoError) {
+    
+    QMessageBox::critical(this, "Ошибка", err.text());
+    
+  }
+  else {
+    
+    svidev::fill_device_list(ui->cbDevices);
+    
+  }
+
 
   /* читаем параметры программы */
   ui->spinTimer->setValue(AppParams::readParam(this, "General", "RequestTimer", 200).toInt());
@@ -107,7 +115,7 @@ MainWindow::MainWindow(QWidget *parent) :
   foreach (svgraph::GraphIDs key, svgraph::GraphTypes.keys())
     _calcs.insert(key, 0);
 
-  connect(this, SIGNAL(newState(bool)), this, SLOT(stateChanged(bool)));
+  connect(this, SIGNAL(newState(ControlsState)), this, SLOT(stateChanged(ControlsState)));
   
   connect(_chart, SIGNAL(onReset()), this, SLOT(onChartReset()));
   
@@ -216,95 +224,139 @@ void MainWindow::on_bnCycle_clicked()
     return;
   }
   
-  ui->bnCycle->setEnabled(false);
-  ui->bnOneShot->setEnabled(false);
-  ui->frame->setEnabled(false);
-  QApplication::processEvents();
-  
+  emit newState(csDisabeld);
+
   // параметры окна графиков
   _chart_params = _chart->params();
   _chart_params.x_tick_period = ui->spinTimer->value();
   _chart->setParams(_chart_params);
   
-  if(!_dev)
-  {
+  if(!_device) {
+    
     /** синхронизация с Arduino **/
     if(ui->gbSynchronizeArduino->isChecked()) {
       
       if(!_arduino->start()) {
-        emit newState(false);
+        emit newState(csReady);
         return;
       }
     }
     
     svidev::DeviceInfo dinfo;
-//    dinfo.
-    svidev::SupportedDevices devtype;
+    svidev::fill_device_info(ui->cbDevices->currentData().toInt(), dinfo);
     
-#ifdef NO_USB_DEVICE  
-  devtype = svidev::VirtualDevice;
-#else
+    switch (dinfo.deviceType) {
+      
+      case svidev::VirtualDevice:
+        _device = new SvVirtualDevice(dinfo);
+        break;
+        
+      case svidev::MAX35101EV:
+        _device = new SvMAX35101EV(dinfo);
+        break;
+        
+      default:
+        break;
+    }    
     
-   _device = new SvMAX35101Evaluate(dinfo);
-//   _device
-   
-#endif
     
-    _dev = new SvMAX35101Evaluate(dinfo);
-    connect(_dev, SIGNAL(new_data(svidev::MeasuredData )), this, SLOT(new_data(svidev::MeasuredData )));
-    _dev->start(ui->spinTimer->value());
-    
-    emit newState(true);    
-
-  }
-  else
-  {
-    /** синхронизация с Arduino **/
-    if(ui->gbSynchronizeArduino->isChecked()) {
-      _arduino->stop();
+    if(_device->open() && _device->start(ui->spinTimer->value())) {
+        
+      qDebug() << 4;
+      connect(_device, SIGNAL(new_data(svidev::MeasuredData)), this, SLOT(new_data(svidev::MeasuredData)));
+//      connect(_device, SIGNAL(new_data(qreal)), this, SLOT(new_data(qreal)));
+      emit newState(csWork);  
+      
+      return;
+        
     }
-
-    /** ВНИМАНИЕ здесь вызывается деструктор ~SvPullUsb() **/  
-    delete _dev; 
-    _dev = nullptr;
-    
-#ifndef NO_USB_DEVICE
- 
-#endif
- 
-      emit newState(false);      
-
-  }
-}
-
-void MainWindow::stateChanged(bool state)
-{
-  if(state) {
-    ui->bnCycle->setText("Стоп");
-    ui->bnCycle->setStyleSheet("background-color: tomato");
-   
-  }
-  else {
-   
-    ui->bnCycle->setText("Старт");
-    ui->bnCycle->setStyleSheet("background-color: palegreen;");
-    
-    on_bnSaveToFile_clicked(false);
+    else {
+      
+      log << svlog::Time << svlog::Critical << _device->lastError() << svlog::endl;
+      
+    }
   }
   
-  ui->frame->setEnabled(!state);
-  ui->bnOneShot->setEnabled(!state);
-  ui->bnSaveToFile->setEnabled(state);
-  ui->bnCycle->setEnabled(true);
+  /** все останавливаем и удаляем **/  
+  /* Arduino */
+  if(ui->gbSynchronizeArduino->isChecked()) {
+    _arduino->stop();
+  }
+  
+  on_bnSaveToFile_clicked(false);
+  
+  /** ВНИМАНИЕ здесь вызывается деструктор устройства **/  
+  delete _device; 
+  _device = nullptr;
+
+  emit newState(csReady);      
+
+}
+
+void MainWindow::stateChanged(ControlsState state)
+{
+  
+  switch (state) {
+    case csDisabeld:
+      
+      ui->gbDevice->setEnabled(false);
+      ui->gbSynchronizeArduino->setEnabled(false);
+      ui->gbSaveFile->setEnabled(false);
+      ui->gbGraphs->setEnabled(false);
+      
+      ui->graphControlFrame->setEnabled(false);
+      
+      ui->bnCycle->setEnabled(false);
+      ui->bnOneShot->setEnabled(false);
+      ui->spinTimer->setEnabled(false);
+      
+      break;
+      
+    case csReady:
+      
+      ui->bnCycle->setEnabled(true);
+      ui->bnOneShot->setEnabled(true);
+      ui->graphControlFrame->setEnabled(true);
+      
+      ui->gbDevice->setEnabled(true);
+      ui->gbSynchronizeArduino->setEnabled(true);
+      ui->gbSaveFile->setEnabled(true);
+      ui->gbGraphs->setEnabled(true);
+      
+      ui->spinTimer->setEnabled(true);
+      
+      ui->bnCycle->setText("Старт");
+      ui->bnCycle->setStyleSheet("background-color: palegreen;");
+      ui->bnSaveToFile->setEnabled(false);
+      
+      
+      break;
+      
+    case csWork:
+      
+      ui->bnCycle->setText("Стоп");
+      ui->bnCycle->setStyleSheet("background-color: tomato");
+      
+      ui->bnCycle->setEnabled(true);
+      ui->gbSynchronizeArduino->setEnabled(true);
+      
+      ui->gbSaveFile->setEnabled(true);
+      ui->bnSaveToFile->setEnabled(true);
+      
+      break;
+  }
+
   QApplication::processEvents();
   
 }
 
-void MainWindow::new_data(svidev::MeasuredData data)
+void MainWindow::new_data(const svidev::MeasuredData& data)
 {
-  _dev->mutex.lock();
-
-  /** вычисляем значения **/
+//  qDebug() << data.tof1;
+  
+  _device->mutex.lock();
+  qDebug() << 2;
+  // вычисляем значения //
   _calcs[svgraph::giTOFdiff] = data.tof1 - data.tof2;
   _calcs[svgraph::giVsnd] = 2 * L / ((data.tof1 + data.tof2) / 1000000000); // определяем скорость звука в среде, м/с.
   _calcs[svgraph::giVpot] = 3 * _calcs.value(svgraph::giVsnd) * (_calcs.value(svgraph::giTOFdiff) / (data.tof1 + data.tof2)); // определяем скорость потока, м/с.
@@ -334,15 +386,13 @@ void MainWindow::new_data(svidev::MeasuredData data)
                         .arg(_calcs.value(svgraph::giVpot), 0, 'f', 3)
                         .arg(_calcs.value(svgraph::giVsnd), 0, 'f', 4));
     
-  _dev->mutex.unlock();
+  _device->mutex.unlock(); 
   
 }
 
 void MainWindow::on_bnSaveToFile_clicked(bool checked)
 {
     if(checked) {
-        ui->bnSaveToFile->setText("Stop saving");
-        ui->bnSaveToFile->setStyleSheet("background-color: tomato");
 
         svfnt::SvRE re(QDateTime::currentDateTime());
         re.relist << qMakePair(svfnt::RE_EXT, FILE_EXT);
@@ -354,6 +404,8 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
             return;
         }
 
+        ui->bnSaveToFile->setText("Stop saving");
+        ui->bnSaveToFile->setStyleSheet("background-color: tomato");
 //        s += ("." + FILE_EXT);
 
         MUTEX1.lock();
@@ -404,8 +456,8 @@ void MainWindow::on_bnSaveToFile_clicked(bool checked)
 
     }
 
-    else if(_file)
-    {
+    else if(_file) {
+      
         MUTEX1.lock();
         _file->close();
         delete _file;
@@ -630,12 +682,20 @@ void MainWindow::on_bnAddNewDevice_clicked()
     case svidev::VirtualDevice:
     {
       log << svlog::Critical << svlog::Time
-        << QString("Нельзя добавить\"%1\"").arg(svidev::SupportedDevicesNames.value(dev_type))
-        << svlog::endl;
+          << QString("Нельзя добавить еще одно \"%1\"").arg(svidev::SupportedDevicesNames.value(dev_type))
+          << svlog::endl;
+      break;
     }
   
     case svidev::MAX35101EV:
-      SvMAX35101Evaluate::addNewDevice();
+      
+      if(SvMAX35101EV::addNewDevice()) {
+        
+        svidev::fill_device_list(ui->cbDevices);
+        ui->cbDevices->setCurrentIndex(ui->cbDevices->count() - 1);
+        
+      }
+      
       break;
       
     default:
@@ -645,5 +705,19 @@ void MainWindow::on_bnAddNewDevice_clicked()
 
 void MainWindow::on_bnRemoveDevice_clicked()
 {
+  if(ui->cbDevices->currentText() == svidev::SupportedDevicesNames.value(svidev::VirtualDevice))
+    return;
+  
+  int id = ui->cbDevices->currentData().toInt();
+  
+  QSqlError err = SQLITE->execSQL(QString(SQL_DELETE_DEVICE).arg(id));
+  if(err.type() != QSqlError::NoError) {
     
+    QMessageBox::critical(this, "Ошибка", err.text());
+    
+  }
+  else {
+    
+    ui->cbDevices->removeItem(ui->cbDevices->currentIndex());
+  }
 }

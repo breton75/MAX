@@ -1,22 +1,22 @@
 #include "sv_max35101evaluate.h"
 
 extern SvSQLITE *SQLITE;
-SvSelectMAX35101EvDevice *SELECTMAX35101EV_DEVICE;
+SvSelectMAX35101EVDevice *SELECTMAX35101EV_DEVICE;
 
-SvMAX35101Evaluate::SvMAX35101Evaluate(svidev::DeviceInfo deviceInfo, QObject *parent)
+SvMAX35101EV::SvMAX35101EV(svidev::DeviceInfo deviceInfo, QObject *parent)
 {
   setDeviceInfo(deviceInfo);
   setParent(parent);
 }
 
-SvMAX35101Evaluate::~SvMAX35101Evaluate()
+SvMAX35101EV::~SvMAX35101EV()
 {
   stop();
   close();
   deleteLater();
 }
 
-bool SvMAX35101Evaluate::open()
+bool SvMAX35101EV::open()
 {
   libusb_context *ctx = NULL;  
   libusb_init(NULL);  // инициализируем библиотеку
@@ -44,7 +44,7 @@ bool SvMAX35101Evaluate::open()
   return true;
 }
 
-void SvMAX35101Evaluate::close()
+void SvMAX35101EV::close()
 {
   libusb_release_interface(_handle, 0); // отпускаем интерфейс 0
   libusb_close(_handle);  // закрываем устройство
@@ -54,7 +54,7 @@ void SvMAX35101Evaluate::close()
   setOpened(false);
 }
 
-bool SvMAX35101Evaluate::start(quint32 msecs)
+bool SvMAX35101EV::start(quint32 msecs)
 {
   if(!isOpened()) {
     setLastError(QString("%1: device is not opened").arg(deviceInfo().name));
@@ -64,14 +64,14 @@ bool SvMAX35101Evaluate::start(quint32 msecs)
   if(_thr)
     delete _thr;
   
-  _thr = new SvPullMAX35101Evaluate(_handle, msecs, &mutex);
+  _thr = new SvPullMAX35101EV(_handle, msecs, &mutex);
   connect(_thr, SIGNAL(new_data(svidev::MeasuredData )), this, SIGNAL(new_data(svidev::MeasuredData )));
   _thr->start();
   
   
 }
 
-bool SvMAX35101Evaluate::stop()
+bool SvMAX35101EV::stop()
 {
   if(_thr)
     delete _thr;
@@ -79,48 +79,39 @@ bool SvMAX35101Evaluate::stop()
   _thr = nullptr;
 }
 
-void SvMAX35101Evaluate::addNewDevice()
+bool SvMAX35101EV::addNewDevice()
 {
-  uint16_t vendor_id;
-  uint16_t product_id;
-  
-  qDebug() << 1;
   /* показываем форму выбора устройства USB */
-  SvSelectMAX35101EvDevice *sdDlg = new SvSelectMAX35101EvDevice();
-  qDebug() << 2;
+  SvSelectMAX35101EVDevice *sdDlg = new SvSelectMAX35101EVDevice();
   if(sdDlg->exec() != QDialog::Accepted) {
     delete sdDlg;
-    return;
+    return false;
   }
   
-  vendor_id = sdDlg->dinfo.idVendor;
-  product_id = sdDlg->dinfo.idProduct;
-  
-  delete sdDlg;
-//  тут выполняем проверку
-  
-  QSqlError err = SQLITE->execSQL(QString(SQL_NEW_DEVICE)
-                                  .arg(svidev::MAX35101EV)
-                                  .arg(svidev::SupportedDevicesNames.value(svidev::MAX35101EV))
-                                  .arg(vendor_id, 0, 16)
-                                  .arg(product_id, 0, 16)
-                                  .arg(vendor_id)
-                                  .arg(product_id)
+  QSqlError err = SQLITE->execSQL(QString(SQL_NEW_DEVICE) 
+                                  .arg(int(svidev::MAX35101EV))
+                                  .arg(sdDlg->dinfo.name)
+                                  .arg(sdDlg->dinfo.idVendor)
+                                  .arg(sdDlg->dinfo.idProduct)
                                   .arg(-1)
-                                  .arg(-1));
+                                  .arg(-1)
+                                  .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz"))
+                                  .arg(""));
   
   if(err.type() != QSqlError::NoError) {
     QMessageBox::critical(0, "Ошибка", QString("Не удалось добавить новое устройство:\n%1").arg(err.databaseText()), QMessageBox::Ok);
-    return;
+    return false;
   }
  
+  delete sdDlg;
   
+  return true;
 }
 
 /** ---------  ------------ **/
-SvSelectMAX35101EvDevice::SvSelectMAX35101EvDevice(QWidget *parent) :
+SvSelectMAX35101EVDevice::SvSelectMAX35101EVDevice(QWidget *parent) :
   QDialog(parent),
-  ui(new Ui::SvSelectMAX35101DeviceDialog)
+  ui(new Ui::SvSelectMAX35101EVDeviceDialog)
 {
   
   ui->setupUi(this);
@@ -135,10 +126,9 @@ SvSelectMAX35101EvDevice::SvSelectMAX35101EvDevice(QWidget *parent) :
     
 }
 
-void SvSelectMAX35101EvDevice::accept()
+void SvSelectMAX35101EVDevice::accept()
 {
-  svidev::DeviceInfo dinfo;
-  
+  dinfo.name = ui->cbDevice->currentText();
   dinfo.idVendor = _devices.value (ui->cbDevice->currentIndex()).first;
   dinfo.idProduct = _devices.value(ui->cbDevice->currentIndex()).second;
   
@@ -146,77 +136,66 @@ void SvSelectMAX35101EvDevice::accept()
   
 }
 
-void SvSelectMAX35101EvDevice::on_bnUpdateDeviceList_clicked()
+void SvSelectMAX35101EVDevice::on_bnUpdateDeviceList_clicked()
 {
   libusb_device **devs;
-  libusb_device_handle *devHandle = NULL;
-	
-  int r;
-	ssize_t cnt;
-  unsigned char strDesc[256];  
+  libusb_device_handle *handle = NULL;
+  struct libusb_device_descriptor desc;
+  unsigned char str[256];  
   
-	r = libusb_init(NULL);
-	if (r < 0)
-		return ;
+  QString sManufacturer, sProduct;
+  
 
-	cnt = libusb_get_device_list(NULL, &devs);
-	if (cnt < 0)
+  if (libusb_init(NULL) < 0) {
+    QMessageBox::critical(0, "Ошибка", "Ошибка при инициализации интерфейса USB", QMessageBox::Ok);
 		return ;
-  
-  libusb_device *dev;
-	int i = 0;
+  }
+
+	ssize_t usbDevsCnt = libusb_get_device_list(NULL, &devs);
 
   ui->cbDevice->clear();
-  
-	while ((dev = devs[i++]) != NULL) {
-		
-    if(devHandle != NULL) {
-      libusb_close(devHandle);
-      devHandle = NULL;
+	for(int i = 0; i < usbDevsCnt; i++) {
+    
+    if(handle != NULL) {
+      libusb_close(handle);
+      handle = NULL;
     }
-    
-    struct libusb_device_descriptor desc;
-    
-		int r = libusb_get_device_descriptor(dev, &desc);
-		
-    if (r < 0) {
+
+    if (libusb_get_device_descriptor(devs[i], &desc) < 0) {
 			QMessageBox::critical(this, "Ошибка", "Failed to get device descriptor", QMessageBox::Ok);
 			continue;
 		}
     
-    r = libusb_open (dev, &devHandle);
-    if (r != LIBUSB_SUCCESS)
+    if (libusb_open (devs[i], &handle) != LIBUSB_SUCCESS)
       continue;
     
-    // Get the string associated with iManufacturer index.
+    /// iManufacturer 
     if (desc.iManufacturer > 0) {
-      
-       r = libusb_get_string_descriptor_ascii(devHandle, desc.iManufacturer, strDesc, 256);
        
-       if (r < 0)
+       if (libusb_get_string_descriptor_ascii(handle, desc.iManufacturer, str, 256) < 0)
           continue;
-
-       qDebug() << "   iManufacturer" <<  strDesc;
+       
+       sManufacturer = QString::fromLocal8Bit((const char*)str);
     }
-
-    //========================================================================
-    // Get string associated with iProduct index.
+    
+    /// iProduct
     if (desc.iProduct > 0) {
-      
-       r = libusb_get_string_descriptor_ascii(devHandle, desc.iProduct, strDesc, 256);
-       
-       if (r < 0)
-          continue;
 
-       qDebug() << "   iProduct" << strDesc;
+      if (libusb_get_string_descriptor_ascii(handle, desc.iProduct, str, 256) < 0)
+        continue;
+      
+      sProduct = QString::fromLocal8Bit((const char*)str);
     }
     
+    libusb_close(handle);
+    handle = NULL;
     
-    QString devdesc = QString("%1:%2 (bus %3, device %4)")
+    
+    QString devdesc = QString("%1 %2 [VID:%3 PID:%4]")
+                      .arg(sManufacturer)
+                      .arg(sProduct)
                       .arg(desc.idVendor, 0, 16)
-                      .arg(desc.idProduct, 0, 16)
-                      .arg(libusb_get_bus_number(dev))
-                      .arg(libusb_get_device_address(dev));
+                      .arg(desc.idProduct, 0, 16);
     
     ui->cbDevice->addItem(devdesc);
     _devices.insert(ui->cbDevice->count() - 1, QPair<uint16_t, uint16_t>(desc.idVendor, desc.idProduct));
@@ -230,13 +209,13 @@ void SvSelectMAX35101EvDevice::on_bnUpdateDeviceList_clicked()
 
 /** ******************************* **/
 
-SvPullMAX35101Evaluate::~SvPullMAX35101Evaluate()
+SvPullMAX35101EV::~SvPullMAX35101EV()
 { 
   stop();
   deleteLater();
 }
 
-void SvPullMAX35101Evaluate::run()
+void SvPullMAX35101EV::run()
 {
   _started = true;
   _finished = false;
@@ -293,13 +272,13 @@ void SvPullMAX35101Evaluate::run()
   
 }
 
-void SvPullMAX35101Evaluate::stop()
+void SvPullMAX35101EV::stop()
 {
   _started = false;
   while(!_finished) QApplication::processEvents();
 }
 
-fres* SvPullMAX35101Evaluate::pullData(QByteArray &ba)
+fres* SvPullMAX35101EV::pullData(QByteArray &ba)
 {
   fres *result = new fres;
   result->code = 0;

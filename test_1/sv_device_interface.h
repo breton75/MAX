@@ -7,15 +7,16 @@
 #include <QMap>
 #include <QDateTime>
 #include <QTextEdit>
+#include <QMetaType>
 
-#include "ui_sv_device_editor.h"
+//#include "ui_sv_device_editor.h"
 #include "ui_sv_select_device_type_dialog.h"
 
 #include "../../svlib/sv_sqlite.h"
 #include "../../svlib/sv_log.h"
 
 namespace Ui {
-class SvDeviceEditorDialog;
+//class SvDeviceEditorDialog;
 class SvSelectDeviceTypeDialog;
 }
 
@@ -24,9 +25,13 @@ class SvSelectDeviceTypeDialog;
                           "       manufacturer_id, port, date_time, description " \
                           "from devices where id = %1"
 
-#define SQL_INSERT_DEVICE "insert into devices (device_type, vendor_id, product_id, "             \
-                          "                     manufacturer_id, port, date_time, description) "  \
-                          "values(%1, %2, %3, %4, %5, '%6', '%7')"
+#define SQL_NEW_DEVICE "insert into devices (device_type, device_name, vendor_id, "  \
+                       "product_id, manufacturer_id, port, date_time, description) " \
+                       "values(%1, '%2', %3, %4, %5, %6, '%7', '%8')"
+
+//#define SQL_INSERT_DEVICE "insert into devices (device_type, vendor_id, product_id, "             \
+//                          "                     manufacturer_id, port, date_time, description) "  \
+//                          "values(%1, %2, %3, %4, %5, '%6', '%7')"
 
 #define SQL_DELETE_DEVICE "delete from devices where id = %1"
 
@@ -42,6 +47,9 @@ namespace svidev {
     qreal temperature = 0.0;
   } MeasuredData;
 
+  typedef MeasuredData mdata_t;
+  
+  
   enum SupportedDevices {
     VirtualDevice,
     MAX35101EV,
@@ -49,9 +57,12 @@ namespace svidev {
     AMEBuoy
   };
 
+  typedef SupportedDevices dev_t;
+//  qRegisterMetaType<dev_t>("dev_t");
+  
   typedef struct {
     int dbid;
-    uint8_t deviceType;
+    dev_t deviceType;
     QString name = "";
     uint16_t idVendor;
     uint16_t idProduct;
@@ -69,6 +80,10 @@ namespace svidev {
 
   class SvSelectDeviceType;
   
+  QSqlError open_db(QString dbFileName);
+  QSqlError fill_device_list(QComboBox *cb);
+  QSqlError fill_device_info(int dbid, svidev::DeviceInfo &dinfo);
+  
 }
 
 /** ----------- SvIDevice ------------ **/
@@ -77,7 +92,7 @@ class svidev::SvIDevice : public QObject
     Q_OBJECT
     
 public:
-
+  SvIDevice() { qRegisterMetaType<svidev::MeasuredData>("svidev::MeasuredData"); }
   virtual ~SvIDevice() { }
   
   virtual bool open() = 0;
@@ -103,48 +118,48 @@ protected:
   QString _last_error;
     
 signals:
-  void new_data(svidev::MeasuredData data);
+  void new_data(const svidev::MeasuredData& data);
       
 };
 
 /** ------------ SvDeviceEditorDialog ------------- **/
-class SvDeviceEditor : public QDialog
-{
-  Q_OBJECT
+//class SvDeviceEditor : public QDialog
+//{
+//  Q_OBJECT
   
-public:
-  enum ShowMode { smNew = 0, smEdit = 1 };
+//public:
+//  enum ShowMode { smNew = 0, smEdit = 1 };
   
-  explicit SvDeviceEditor(QTextEdit *logWidget, int dbid = -1, QWidget *parent = 0);
-  ~SvDeviceEditor();
+//  explicit SvDeviceEditor(QTextEdit *logWidget, int dbid = -1, QWidget *parent = 0);
+//  ~SvDeviceEditor();
   
   
-  svidev::DeviceInfo dinfo;
+//  svidev::DeviceInfo dinfo;
   
-//  int     t_id;
-//  QString t_uid = "";
-////  QString t_modelName = "";
-////  QString t_className = "";
-////  QString t_brandName = "";
+////  int     t_id;
+////  QString t_uid = "";
+//////  QString t_modelName = "";
+//////  QString t_className = "";
+//////  QString t_brandName = "";
 
-//  QDateTime t_date_time;
-//  QString t_description = "";
+////  QDateTime t_date_time;
+////  QString t_description = "";
   
-private:
-  Ui::SvDeviceEditorDialog *ui;
+//private:
+//  Ui::SvDeviceEditorDialog *ui;
   
-  int _showMode;
-  QString _curConnectionType = "";
+//  int _showMode;
+//  QString _curConnectionType = "";
   
-  svlog::SvLog _log;
+//  svlog::SvLog _log;
   
-public slots:
-  void accept() Q_DECL_OVERRIDE;
+//public slots:
+//  void accept() Q_DECL_OVERRIDE;
   
-private slots:
-  void setCurrentConnectionType(int index);
+//private slots:
+//  void setCurrentConnectionType(int index);
   
-};
+//};
 
 
 /** ---------------  ---------------- **/
@@ -168,5 +183,6 @@ private slots:
   
 };
 
+//Q_DECLARE_METATYPE(svidev::MeasuredData)
 
 #endif // SV_DEVICE_INTERFACE_H

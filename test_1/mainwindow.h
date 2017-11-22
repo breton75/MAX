@@ -34,6 +34,7 @@ QT_CHARTS_USE_NAMESPACE
 #include "../../svlib/sv_tcpserverclient.h"
 
 #include "sv_device_interface.h"
+#include "sv_virtual_device.h"
 #include "sv_max35101evaluate.h"
 
 //#define NO_USB_DEVICE
@@ -83,6 +84,12 @@ class MainWindow : public QMainWindow
   
   const QString FILE_EXT = "frs";
   
+  enum ControlsState {
+    csDisabeld,
+    csReady,
+    csWork
+  };
+  
 public:
   explicit MainWindow(QWidget *parent = 0);
   ~MainWindow();
@@ -97,7 +104,7 @@ private slots:
   void on_bnOneShot_clicked();
   void on_bnCycle_clicked();
   
-  void new_data(svidev::MeasuredData data);
+  void new_data(const svidev::MeasuredData& data);
   
 //  void on_checkSaveToFile_clicked(bool checked);
   void on_bnSaveFileSelectPath_clicked();
@@ -109,7 +116,7 @@ private slots:
   void on_listGraphs_currentRowChanged(int currentRow);
   void on_listGraphs_doubleClicked(const QModelIndex &index);
   
-  void stateChanged(bool state);
+  void stateChanged(ControlsState state);
   
   void on_spinTimer_editingFinished();
   
@@ -126,7 +133,7 @@ private:
   
   QMap<int, QPair<uint16_t, uint16_t>> _devices;
   
-  svidev::SvIDevice* _dev;
+//  svidev::SvIDevice* _dev;
 //  SvPullUsb *_thr = nullptr;
   
   int _timerId;
@@ -160,7 +167,7 @@ private:
 //  void addNewDevice();
   
 signals:
-  newState(bool state);
+  newState(ControlsState state);
   
 };
 
