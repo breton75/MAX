@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui charts printsupport network sql
+QT       += core gui charts printsupport network sql serialport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -45,7 +45,8 @@ SOURCES += main.cpp\
     sv_virtual_device.cpp \
     ../../svlib/sv_sqlite.cpp \
     sv_device_interface.cpp \
-    sv_select_device_type_dialog.cpp
+    sv_select_device_type_dialog.cpp \
+    sv_tdc1000_7200EVM.cpp
 
 
 HEADERS  += mainwindow.h \
@@ -64,13 +65,14 @@ HEADERS  += mainwindow.h \
     sv_virtual_device.h \
     sv_device_interface.h \
     ../../svlib/sv_sqlite.h \
-    sv_select_device_type_dialog.h
+    sv_select_device_type_dialog.h \
+    sv_tdc1000_7200EVM.h
 
 FORMS    += mainwindow.ui \
     sv_graphparamsdialog.ui \
     engine_control.ui \
     sv_select_device_type_dialog.ui \
-    sv_select_max35101_device_dialog.ui
+    sv_select_device_dialog.ui
 
 win32: LIBS += -L$$PWD/../../libusb-1.0.21/MinGW32/dll/ -llibusb-1.0
 

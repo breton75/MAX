@@ -20,18 +20,22 @@ namespace Ui {
 class SvSelectDeviceTypeDialog;
 }
 
+#define SQL_CREATE_TABLE_DEVICES "create table devices (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " \
+                                 "device_type INTEGER, device_name TEXT, vendor_id INTEGER, "     \
+                                 "product_id INTEGER, manufacturer_id INTEGER, port_name TEXT, " \
+                                 "date_time TEXT, description TEXT)"
 
-#define SQL_SELECT_DEVICE "select id, device_type, vendor_id, product_id, "       \
-                          "       manufacturer_id, port, date_time, description " \
-                          "from devices where id = %1"
+#define SQL_SELECT_DEVICE_BY_ID "select id, device_type, device_name, vendor_id, product_id, "       \
+                                "manufacturer_id, port_name, date_time, description " \
+                                "from devices where id = %1"
 
 #define SQL_NEW_DEVICE "insert into devices (device_type, device_name, vendor_id, "  \
-                       "product_id, manufacturer_id, port, date_time, description) " \
-                       "values(%1, '%2', %3, %4, %5, %6, '%7', '%8')"
+                       "product_id, manufacturer_id, port_name, date_time, description) " \
+                       "values(%1, '%2', %3, %4, %5, '%6', '%7', '%8')"
 
-//#define SQL_INSERT_DEVICE "insert into devices (device_type, vendor_id, product_id, "             \
-//                          "                     manufacturer_id, port, date_time, description) "  \
-//                          "values(%1, %2, %3, %4, %5, '%6', '%7')"
+#define SQL_SELECT_DEVICE_LIST "select id, device_type, device_name, vendor_id, product_id, "       \
+                               "manufacturer_id, port_name, date_time, description " \
+                               "from devices order by id asc"
 
 #define SQL_DELETE_DEVICE "delete from devices where id = %1"
 
@@ -58,16 +62,16 @@ namespace svidev {
   };
 
   typedef SupportedDevices dev_t;
-//  qRegisterMetaType<dev_t>("dev_t");
+
   
   typedef struct {
     int dbid;
     dev_t deviceType;
-    QString name = "";
+    QString deviceName = "";
     uint16_t idVendor;
     uint16_t idProduct;
     uint8_t iManufacturer;
-    uint16_t port;
+    QString portName = "";
   } DeviceInfo;
   
   const QMap<SupportedDevices, QString> SupportedDevicesNames = {
@@ -92,7 +96,12 @@ class svidev::SvIDevice : public QObject
     Q_OBJECT
     
 public:
-  SvIDevice() { qRegisterMetaType<svidev::MeasuredData>("svidev::MeasuredData"); }
+  SvIDevice() { 
+    
+    qRegisterMetaType<svidev::MeasuredData>("svidev::mdata_t"); 
+    
+  }
+  
   virtual ~SvIDevice() { }
   
   virtual bool open() = 0;
@@ -118,7 +127,7 @@ protected:
   QString _last_error;
     
 signals:
-  void new_data(const svidev::MeasuredData& data);
+  void new_data(const svidev::mdata_t& data);
       
 };
 

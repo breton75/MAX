@@ -262,8 +262,7 @@ void MainWindow::on_bnCycle_clicked()
     
     if(_device->open() && _device->start(ui->spinTimer->value())) {
         
-      qDebug() << 4;
-      connect(_device, SIGNAL(new_data(svidev::MeasuredData)), this, SLOT(new_data(svidev::MeasuredData)));
+      connect(_device, &svidev::SvIDevice::new_data, this, &MainWindow::new_data);
 //      connect(_device, SIGNAL(new_data(qreal)), this, SLOT(new_data(qreal)));
       emit newState(csWork);  
       
@@ -355,7 +354,7 @@ void MainWindow::new_data(const svidev::MeasuredData& data)
 //  qDebug() << data.tof1;
   
   _device->mutex.lock();
-  qDebug() << 2;
+  
   // вычисляем значения //
   _calcs[svgraph::giTOFdiff] = data.tof1 - data.tof2;
   _calcs[svgraph::giVsnd] = 2 * L / ((data.tof1 + data.tof2) / 1000000000); // определяем скорость звука в среде, м/с.

@@ -11,7 +11,6 @@ SvMAX35101EV::SvMAX35101EV(svidev::DeviceInfo deviceInfo, QObject *parent)
 
 SvMAX35101EV::~SvMAX35101EV()
 {
-  stop();
   close();
   deleteLater();
 }
@@ -24,18 +23,17 @@ bool SvMAX35101EV::open()
   // открываем устройство
   _handle = libusb_open_device_with_vid_pid(ctx, _device_info.idVendor, _device_info.idProduct);
     
-  if (!_handle)
-  {
+  if (!_handle) {
     libusb_exit(NULL);
     setLastError(QString("%1: libusb_open_device_with_vid_pid error. (idVendor = %2, idProduct = %3")
-                  .arg(deviceInfo().name).arg(deviceInfo().idVendor).arg(deviceInfo().idProduct));
+                  .arg(deviceInfo().deviceName).arg(deviceInfo().idVendor).arg(deviceInfo().idProduct));
     return false;
   }
   
   // запрашиваем интерфейс 0 для себя
   int err = libusb_claim_interface(_handle, 0); 
   if(err < 0) { 
-    setLastError(QString("%1: libusb_claim_interface error: %2").arg(deviceInfo().name).arg(err));
+    setLastError(QString("%1: libusb_claim_interface error: %2").arg(deviceInfo().deviceName).arg(err));
     return false;
   }
   
@@ -46,6 +44,8 @@ bool SvMAX35101EV::open()
 
 void SvMAX35101EV::close()
 {
+  stop();
+  
   libusb_release_interface(_handle, 0); // отпускаем интерфейс 0
   libusb_close(_handle);  // закрываем устройство
   libusb_exit(NULL);  // завершаем работу с библиотекой 
@@ -61,22 +61,22 @@ bool SvMAX35101EV::start(quint32 msecs)
     return false;
   }
   
-  if(_thr)
-    delete _thr;
+  if(_pull_thr)
+    delete _pull_thr;
   
-  _thr = new SvPullMAX35101EV(_handle, msecs, &mutex);
-  connect(_thr, SIGNAL(new_data(svidev::MeasuredData )), this, SIGNAL(new_data(svidev::MeasuredData )));
-  _thr->start();
+  _pull_thr = new SvPullMAX35101EV(_handle, msecs, &mutex);
+  connect(_pull_thr, &SvPullMAX35101EV::new_data, this, &svidev::SvIDevice::new_data, Qt::QueuedConnection);
+  _pull_thr->start();
   
-  
+  return true;
 }
 
-bool SvMAX35101EV::stop()
+void SvMAX35101EV::stop()
 {
-  if(_thr)
-    delete _thr;
+  if(_pull_thr)
+    delete _pull_thr;
   
-  _thr = nullptr;
+  _pull_thr = nullptr;
 }
 
 bool SvMAX35101EV::addNewDevice()
@@ -90,11 +90,11 @@ bool SvMAX35101EV::addNewDevice()
   
   QSqlError err = SQLITE->execSQL(QString(SQL_NEW_DEVICE) 
                                   .arg(int(svidev::MAX35101EV))
-                                  .arg(sdDlg->dinfo.name)
+                                  .arg(sdDlg->dinfo.deviceName)
                                   .arg(sdDlg->dinfo.idVendor)
                                   .arg(sdDlg->dinfo.idProduct)
                                   .arg(-1)
-                                  .arg(-1)
+                                  .arg("")
                                   .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz"))
                                   .arg(""));
   
@@ -128,7 +128,7 @@ SvSelectMAX35101EVDevice::SvSelectMAX35101EVDevice(QWidget *parent) :
 
 void SvSelectMAX35101EVDevice::accept()
 {
-  dinfo.name = ui->cbDevice->currentText();
+  dinfo. deviceName = ui->cbDevice->currentText();
   dinfo.idVendor = _devices.value (ui->cbDevice->currentIndex()).first;
   dinfo.idProduct = _devices.value(ui->cbDevice->currentIndex()).second;
   
@@ -209,6 +209,13 @@ void SvSelectMAX35101EVDevice::on_bnUpdateDeviceList_clicked()
 
 /** ******************************* **/
 
+SvPullMAX35101EV::SvPullMAX35101EV(libusb_device_handle *handle, quint32 timeout, QMutex *mutex)
+{
+  _handle = handle;
+  _timeout = timeout;
+  _mutex = mutex;
+}
+
 SvPullMAX35101EV::~SvPullMAX35101EV()
 { 
   stop();
@@ -224,15 +231,15 @@ void SvPullMAX35101EV::run()
   fres* result_2 = nullptr;
   fres* result_3 = nullptr;
   
-  svidev::MeasuredData measured_data;
+  svidev::mdata_t measured_data;
+  
+  /* первый, второй и третий запросы */  
+  QByteArray b1 = QByteArray::fromHex("32000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+  QByteArray b2 = QByteArray::fromHex("3222C400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
+  QByteArray b3 = QByteArray::fromHex("3422C400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
   
   while(_started)
   {
-    /* первый, второй и третий запросы */  
-    QByteArray b1 = QByteArray::fromHex("32000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
-    QByteArray b2 = QByteArray::fromHex("3222C400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
-    QByteArray b3 = QByteArray::fromHex("3422C400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
-    
     result_1 = pullData(b1);
     if(result_1->code == 0) {
       

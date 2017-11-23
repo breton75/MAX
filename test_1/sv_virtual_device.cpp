@@ -2,7 +2,7 @@
 
 SvVirtualDevice::SvVirtualDevice(svidev::DeviceInfo deviceInfo, QObject *parent)
 {
-
+  setParent(parent);
 }
 
 SvVirtualDevice::~SvVirtualDevice()
@@ -30,13 +30,13 @@ bool SvVirtualDevice::start(quint32 msecs)
     setLastError(QString("%1: device is not opened").arg(deviceInfo().name));
     return false;
   }
-  
-  qDebug() << 5;
+
   if(_thr)
     delete _thr;
   
   _thr = new SvPullVirtualDevice(msecs, &mutex);
-  connect(_thr, SIGNAL(new_data(svidev::MeasuredData)), this, SIGNAL(new_data(svidev::MeasuredData)));
+  connect(_thr, &SvPullVirtualDevice::new_data, this, &svidev::SvIDevice::new_data, Qt::QueuedConnection);
+//  connect(_thr, SIGNAL(new_data(svidev::mdata_t)), this, SIGNAL(new_data(svidev::mdata_t)));
 //  connect(_thr, SIGNAL(new_data(qreal)), this, SIGNAL(new_data(qreal)));
 //  connect(_thr, &SvPullVirtualDevice::new_data, this, &svidev::SvIDevice::new_data);
   _thr->start();
@@ -77,7 +77,6 @@ void SvPullVirtualDevice::run()
      
     _mutex->unlock();
     emit new_data(measured_data); 
-    qDebug() << 3;
     
     msleep(_timeout);
     

@@ -21,9 +21,9 @@
 #include <QPushButton>
 
 #include "libusb.h"
-#include "sv_device_interface.h"
 
-#include "ui_sv_select_max35101_device_dialog.h"
+#include "sv_device_interface.h"
+#include "ui_sv_select_device_dialog.h"
 
 
 #define MAX_BUF_SIZE 1024
@@ -31,7 +31,7 @@
 
 
 namespace Ui {
-class SvSelectMAX35101EVDeviceDialog;
+class SvSelectDeviceDialog;
 }
 
 
@@ -83,17 +83,14 @@ public:
   void close();
   
   bool start(quint32 msecs);
-  bool stop();
+  void stop();
   
   static bool addNewDevice();
    
 private:
   libusb_device_handle* _handle = nullptr;
   
-  SvPullMAX35101EV* _thr = nullptr;
-  
-signals:
-//  void new_data(svidev::MeasuredData data);
+  SvPullMAX35101EV* _pull_thr = nullptr;
   
 };
 
@@ -112,21 +109,7 @@ public:
   
 private:
   
-  Ui::SvSelectMAX35101EVDeviceDialog *ui;
-//  void setupUi();
-  
-//  QVBoxLayout *vlayMain;
-//  QGroupBox *gbItems;
-//  QVBoxLayout *vlayItems;
-//  QHBoxLayout *hlayDevice;
-//  QLabel *lblDevice;
-//  QComboBox *cbDevice;
-//  QPushButton *bnUpdateDeviceList;
-//  QHBoxLayout *hlayButtons;
-//  QSpacerItem *spacer;
-//  QPushButton *bnOk;
-//  QPushButton *bnCancel;
-  
+  Ui::SvSelectDeviceDialog *ui;
   
   QMap<int, QPair<uint16_t, uint16_t>> _devices;
   
@@ -144,22 +127,12 @@ class SvPullMAX35101EV: public QThread
     Q_OBJECT
   
 public:
-  explicit SvPullMAX35101EV(libusb_device_handle *handle, quint32 timeout, QMutex *mutex)
-  {
-    _handle = handle;
-    _timeout = timeout;
-    _mutex = mutex;
-  }
-  
+  explicit SvPullMAX35101EV(libusb_device_handle *handle, quint32 timeout, QMutex *mutex);  
   ~SvPullMAX35101EV();
 
   void stop();
   
   MAX35101EV_ANSWER max_data;
-  
-  
-protected:
-//  void timerEvent(QTimerEvent *te);
   
 private:
   void run() Q_DECL_OVERRIDE;
@@ -174,7 +147,7 @@ private:
   QMutex* _mutex;
   
 signals:
-  void new_data(svidev::MeasuredData data);
+  void new_data(const svidev::mdata_t& data);
   
 };
 

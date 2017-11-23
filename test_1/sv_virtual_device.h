@@ -65,7 +65,7 @@ private:
   QMutex* _mutex;
   
 signals:
-  void new_data(const svidev::MeasuredData& data);
+  void new_data(const svidev::mdata_t& data);
   
 };
 
