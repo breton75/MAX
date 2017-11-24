@@ -108,7 +108,7 @@ public:
   virtual void close() = 0;
   
   virtual bool start(quint32 msecs) = 0;
-  virtual bool stop() = 0;
+  virtual void stop() = 0;
   
   QMutex mutex;
   

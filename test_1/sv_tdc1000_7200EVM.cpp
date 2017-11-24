@@ -1,11 +1,13 @@
 #include "sv_tdc1000_7200EVM.h"
 
 extern SvSQLITE *SQLITE;
-SvSelectMAX35101EVDevice *SELECTMAX35101EV_DEVICE;
+SvSelectTDC1000_7200EVMDevice *SELECTTDC1000_TDC7200EV_DEVICE;
 
 SvTDC1000_7200EVM::SvTDC1000_7200EVM(svidev::DeviceInfo deviceInfo, QObject *parent)
 {
   setDeviceInfo(deviceInfo);
+  _port_info = QSerialPortInfo(_device_info.portName);
+  
   setParent(parent);
 }
 
@@ -17,24 +19,26 @@ SvTDC1000_7200EVM::~SvTDC1000_7200EVM()
 
 bool SvTDC1000_7200EVM::open()
 {
-  _serial = new QSerialPort(_device_info.portName);
   
-  if (!_serial) {
+  if(_pull_thr)
+    delete _pull_thr;
+
+  _pull_thr = new SvPullTDC1000_7200EVM(_port_info, &mutex);
+  
+  if(!_pull_thr->open()) {
+  
+    setLastError(_pull_thr->lastError());
     
-    setLastError(QString("Ошибка при создании устройства.\n%1")
-                 .arg(_serial->errorString()));
+    delete _pull_thr;
     return false;
+    
   }
   
-  if(!_serial->open(QIODevice::ReadWrite)) {
-    
-    setLastError(QString("Ошибка при открытии порта %1.\n%2")
-                 .arg(_device_info.portName).arg(_serial->errorString()));
-    return false;
-  }
+//  _pull_thr->_serial->moveToThread(_pull_thr);
   
+  qDebug() << 77;
   setOpened(true);
-  
+  qDebug() << 88;
   return true;
 }
 
@@ -42,34 +46,33 @@ void SvTDC1000_7200EVM::close()
 {
   stop();
   
-  if(_serial->isOpen())
-    _serial->close();
+//  if(_serial->isOpen())
+//    _serial->close();
   
-  delete _serial;
-  _serial = nullptr;
+//  delete _serial;
+//  _serial = nullptr;
   
   setOpened(false);
 }
 
 bool SvTDC1000_7200EVM::start(quint32 msecs)
 {
-  if(!_serial && !isOpened()) {
-    
-    setLastError(QString("%1: device is not opened").arg(deviceInfo().deviceName));
-    return false;
-  }
+  //  if(!_serial && !isOpened()) {
+      
+  if(!_pull_thr) {
+      setLastError(QString("%1: device is not opened").arg(deviceInfo().deviceName));
+      return false;
+    }
   
-  if(_pull_thr)
-    delete _pull_thr;
+  _pull_thr->setTimeout(msecs);
   
-  _pull_thr = new SvPullTDC1000_7200EVM(_serial, msecs, &mutex);
   connect(_pull_thr, &SvPullTDC1000_7200EVM::new_data, this, &svidev::SvIDevice::new_data, Qt::QueuedConnection);
   _pull_thr->start();
   
   
 }
 
-bool SvTDC1000_7200EVM::stop()
+void SvTDC1000_7200EVM::stop()
 {
   if(_pull_thr)
     delete _pull_thr;
@@ -87,12 +90,12 @@ bool SvTDC1000_7200EVM::addNewDevice()
   }
   
   QSqlError err = SQLITE->execSQL(QString(SQL_NEW_DEVICE) 
-                                  .arg(int(svidev::MAX35101EV))
+                                  .arg(int(svidev::TDC1000_TDC7200EVM))
                                   .arg(sdDlg->dinfo.deviceName)
-                                  .arg(sdDlg->dinfo.idVendor)
-                                  .arg(sdDlg->dinfo.idProduct)
                                   .arg(-1)
-                                  .arg("")
+                                  .arg(-1)
+                                  .arg(-1)
+                                  .arg(sdDlg->dinfo.portName)
                                   .arg(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz"))
                                   .arg(""));
   
@@ -129,8 +132,7 @@ SvSelectTDC1000_7200EVMDevice::SvSelectTDC1000_7200EVMDevice(QWidget *parent) :
 void SvSelectTDC1000_7200EVMDevice::accept()
 {
   dinfo.deviceName = ui->cbDevice->currentText();
-  dinfo.idVendor = _devices.value (ui->cbDevice->currentIndex()).first;
-  dinfo.idProduct = _devices.value(ui->cbDevice->currentIndex()).second;
+  dinfo.portName = _devices.value(ui->cbDevice->currentIndex());
   
   QDialog::accept();
   
@@ -142,17 +144,10 @@ void SvSelectTDC1000_7200EVMDevice::on_bnUpdateDeviceList_clicked()
     
   for(QSerialPortInfo port: _available_devices) {
     
-    QString devdesc = QString("%1 %2 [%2]").arg(port.manufacturer()).arg(porn.description()).arg(port.portName());
+    QString devdesc = QString("%1 %2 [%3]").arg(port.manufacturer()).arg(port.description()).arg(port.portName());
+
     ui->cbDevice->addItem(devdesc);
-    
-    
-//    QString devdesc = QString("%1 %2 [VID:%3 PID:%4]")
-//                      .arg(sManufacturer)
-//                      .arg(sProduct)
-//                      .arg(desc.idVendor, 0, 16)
-//                      .arg(desc.idProduct, 0, 16);
-    
-    _devices.insert(ui->cbDevice->count() - 1, devdesc);
+    _devices.insert(ui->cbDevice->count() - 1, port.portName());
   
   }
 }
@@ -160,110 +155,50 @@ void SvSelectTDC1000_7200EVMDevice::on_bnUpdateDeviceList_clicked()
 /** ******************************* **/
 
 
-qres pullTDC1000(QSerialPort *serial)
-{
-  TDC1000::qres result;
-  TDC1000::TDC1000_ANSWER tdc1000data;
-  
-  if (!serial) {
-    result.result = false;
-    result.msg = "Ошибка устройства.";
-    return result;
-  }
-  
-  if(!serial->isOpen()) {
-    if(!serial->open(QIODevice::ReadWrite)) {
-      result.result = false;
-      result.msg = QString("Не удалось открыть порт %1").arg(serial->portName());
-      return result;
-    }
-  }
-  
-  QByteArray request = QByteArray();
-  QByteArray answer = QByteArray();
-  
-  /** ******** читаем канал 1 ********* **/
-  /* устанавливаем первый канал TX1 */
-  request = QByteArray::fromHex("3032303230303030303030303030303030303030303030303030303030303030");
-  
-  result = TDC1000::writeReadTDC1000(serial, request, 1);
-  
-  if(!result.result) return result;
-  
-  /* TOF_ONE_SHOT */
-  request = QByteArray::fromHex("3035303030303030303030303030303030303030303030303030303030303030");
-  
-  result = TDC1000::writeReadTDC1000(serial, request, 2);
-  
-  if(!result.result) return result;
-  
-  if(result.answer.size() != sizeof(TDC1000::TDC1000_ANSWER)) {
-    result.result = false;
-    result.msg = QString("Неверный ответ. Получено %1 байт. Ожидалось %2.")
-                 .arg(answer.size())
-                 .arg(sizeof(TDC1000::TDC1000_ANSWER));
-    return result;
-  }
-    
-  /* фиксируем время t1 */
-  memcpy(&tdc1000data, result.answer.data(), sizeof(TDC1000::TDC1000_ANSWER));
-  
-  /** ЗДЕСЬ ДОЛЖНА БЫТЬ ФОРМУЛА */
-  result.t1 = tdc1000data.time1; 
-  /** ****************** ********/
-  
-  
-  /** ******** читаем канал 2 ********* **/
-  /* устанавливаем второй канал TX2 */
-  request = QByteArray::fromHex("3032303230343030303030303030303030303030303030303030303030303030");
-  
-  result = TDC1000::writeReadTDC1000(serial, request, 1);
-  
-  if(!result.result) return result;
-  
-  /* TOF_ONE_SHOT */
-  request = QByteArray::fromHex("3035303030303030303030303030303030303030303030303030303030303030");
-  
-  result = TDC1000::writeReadTDC1000(serial, request, 2);
-  
-  if(!result.result) return result;
-  
-  if(result.answer.size() != sizeof(TDC1000::TDC1000_ANSWER)) {
-    result.result = false;
-    result.msg = QString("Неверный ответ. Получено %1 байт. Ожидалось %2.")
-                 .arg(answer.size())
-                 .arg(sizeof(TDC1000::TDC1000_ANSWER));
-    return result;
-  }
-    
-  /* фиксируем время t2 */
-  memcpy(&tdc1000data, result.answer.data(), sizeof(TDC1000::TDC1000_ANSWER));
-  
-  /** ЗДЕСЬ ДОЛЖНА БЫТЬ ФОРМУЛА */
-  result.t2 = tdc1000data.time2; 
-  /** ****************** ********/
-  
-  
-  
-  /** ******************************* **/
-//  result.t1 = qFromBigEndian<qint16>(_max_data.time1); // / 262.14;   // время пролета 1, в нс.
-//  result.t2 = qFromBigEndian<qint16>(_max_data.time2); // / 262.14; // время пролета 2, в нс.
-  
-  
-  return result;
-}
-
-
 
 /** ----------------------------------------- **/
-SvPullTDC1000_7200EVM::SvPullTDC1000_7200EVM(QSerialPort *serial, quint32 timeout)
+SvPullTDC1000_7200EVM::SvPullTDC1000_7200EVM(const QSerialPortInfo &portInfo, QMutex *mutex)
 {
-  _serial = serial;
-  _timeout = timeout;
+  _port_info = portInfo;
+//  _timeout = timeout;
+  _mutex = mutex;
+}
+
+bool SvPullTDC1000_7200EVM::open()
+{
+  _serial = new QSerialPort(_port_info.portName());
+  
+  if (!_serial) {
+    
+    _last_error = QString("Ошибка при создании устройства.\n%1")
+                            .arg(_serial->errorString());
+    return false;
+  }
+  
+  if(!_serial->open(QIODevice::ReadWrite)) {
+    
+    _last_error = QString("Ошибка при открытии порта %1.\n%2")
+                      .arg(_port_info.portName()).arg(_serial->errorString());
+    return false;
+  }
+  
+  _serial->moveToThread(this);
+  
+  return true;
+  
 }
 
 SvPullTDC1000_7200EVM::~SvPullTDC1000_7200EVM() 
 { 
+  if(_serial) {
+    
+    if(_serial->isOpen()) {
+      _serial->close();
+    }
+    
+    delete _serial;    
+  }
+  
   stop(); 
   deleteLater(); 
 }
@@ -295,11 +230,11 @@ void SvPullTDC1000_7200EVM::run()
     /** ******** читаем канал 1 ********* **/
     /* устанавливаем первый канал TX1 */
     result = _writeRead(params1, 1);
-    
+    qDebug() << 1 << result.msg;
     if(result.result) {
     
       result = _writeRead(request1, 2);
-    
+      qDebug() << 2 << result.result;
       if(result.result) {
       
         /* фиксируем время t1 */
@@ -310,21 +245,21 @@ void SvPullTDC1000_7200EVM::run()
         /** ****************** ********/
     
     
-    /** ******** читаем канал 2 ********* **/
-    /* устанавливаем второй канал TX2 */
-        result = _writeRead(request, 1);
-    
+        /** ******** читаем канал 2 ********* **/
+        /* устанавливаем второй канал TX2 */
+        result = _writeRead(params2, 1);
+        qDebug() << 3 << result.result;
         if(result.result) {
     
-          result = _writeRead(request, 2);
-    
+          result = _writeRead(request2, 2);
+          qDebug() << 4 << result.result;
           if(result.result) {
       
             /* фиксируем время t2 */
             memcpy(&tdc1000data, result.answer.data(), sizeof(TDC1000_ANSWER));
             
             /** ЗДЕСЬ ДОЛЖНА БЫТЬ ФОРМУЛА */
-            qreal calCount = (tdc1000data.calibr2 - tdc1000data.calibr1) / (tdc1000data.);
+            qreal calCount = (tdc1000data.calibr2 - tdc1000data.calibr1) / (CALIBRATION2_PERIODS - 1);
             
             result.t2 = tdc1000data.time2; 
             /** ****************** ********/
@@ -334,10 +269,11 @@ void SvPullTDC1000_7200EVM::run()
       }
     }
     
-
+    qDebug() << tdc1000data.time1;
+    qDebug() << tdc1000data.time2;
     
-    if(result.result)
-      emit new_data(result.answer); 
+//    if(result.result)
+//      emit new_data(measured_data); 
     
     msleep(_timeout);
     
@@ -347,13 +283,15 @@ void SvPullTDC1000_7200EVM::run()
   
 }
 
-qres SvPullTDC1000_7200EVM::_writeRead(QByteArray& request, int answer_count)
+qres SvPullTDC1000_7200EVM::_writeRead(const QByteArray& request, int answer_count)
 {
   qres res;
   
+  qDebug() << 1;
   _serial->write(request);
   
   if(!_serial->waitForBytesWritten(1000)) {
+    
     res.result = false;
     res.msg = QString("Не удалось записать данные порт.\n%1").arg(_serial->errorString());
     return res;

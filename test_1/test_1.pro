@@ -45,7 +45,6 @@ SOURCES += main.cpp\
     sv_virtual_device.cpp \
     ../../svlib/sv_sqlite.cpp \
     sv_device_interface.cpp \
-    sv_select_device_type_dialog.cpp \
     sv_tdc1000_7200EVM.cpp
 
 
@@ -65,7 +64,6 @@ HEADERS  += mainwindow.h \
     sv_virtual_device.h \
     sv_device_interface.h \
     ../../svlib/sv_sqlite.h \
-    sv_select_device_type_dialog.h \
     sv_tdc1000_7200EVM.h
 
 FORMS    += mainwindow.ui \

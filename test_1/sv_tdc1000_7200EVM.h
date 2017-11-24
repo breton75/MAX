@@ -14,6 +14,8 @@ namespace Ui {
 class SvSelectDeviceDialog;
 }
 
+#define CALIBRATION2_PERIODS 10
+
 #pragma pack(push, 1)
 struct TDC1000_ANSWER{
   qint8  z0;
@@ -57,7 +59,7 @@ struct qres {
 //qres pullTDC1000(QSerialPort *serial);
 //qres writeReadTDC1000(QSerialPort *serial, QByteArray data, int answer_count);
 
-
+class SvPullTDC1000_7200EVM;
 
 class SvTDC1000_7200EVM : public svidev::SvIDevice
 {
@@ -72,12 +74,12 @@ public:
   void close();
   
   bool start(quint32 msecs);
-  bool stop();
+  void stop();
   
   static bool addNewDevice();
    
 private:
-  QSerialPort *_serial = nullptr;
+  QSerialPortInfo _port_info;
   
   SvPullTDC1000_7200EVM* _pull_thr = nullptr;
   
@@ -91,21 +93,33 @@ class SvPullTDC1000_7200EVM: public QThread
     Q_OBJECT
   
 public:
-  explicit SvPullTDC1000_7200EVM(QSerialPort *serial, quint32 timeout);  
+  explicit SvPullTDC1000_7200EVM(const QSerialPortInfo &portInfo, QMutex *mutex);  
   ~SvPullTDC1000_7200EVM();
   
+  bool open();
   void stop();
+  
+  QString lastError() { return _last_error; }
+  
+  void setTimeout(quint32 msecs) { _timeout = msecs; }
+  
+  QSerialPort *_serial = nullptr;
   
 private:
   void run() Q_DECL_OVERRIDE;
   
-  bool _started;
-  bool _finished;
+  bool _started = false;
+  bool _finished = true;
   
   quint32 _timeout;
-  QSerialPort *_serial;
   
-  qres _writeRead(QByteArray &request, int answer_count);
+  QSerialPortInfo _port_info;
+  
+  QMutex* _mutex;
+  
+  QString _last_error = "";
+  
+  qres _writeRead(const QByteArray &request, int answer_count);
   
 signals:
   void new_data(const svidev::mdata_t& data);

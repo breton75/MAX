@@ -29,7 +29,7 @@ public:
   void close();
   
   bool start(quint32 msecs);
-  bool stop();
+  void stop();
     
 private:
   SvPullVirtualDevice* _thr = nullptr;

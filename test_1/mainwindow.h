@@ -36,6 +36,7 @@ QT_CHARTS_USE_NAMESPACE
 #include "sv_device_interface.h"
 #include "sv_virtual_device.h"
 #include "sv_max35101evaluate.h"
+#include "sv_tdc1000_7200EVM.h"
 
 //#define NO_USB_DEVICE
 

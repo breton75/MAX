@@ -255,15 +255,20 @@ void MainWindow::on_bnCycle_clicked()
         _device = new SvMAX35101EV(dinfo);
         break;
         
+      case svidev::TDC1000_TDC7200EVM:
+        _device = new SvTDC1000_7200EVM(dinfo);
+        break;
+        
       default:
         break;
     }    
     
-    
+    qDebug() << 11;
     if(_device->open() && _device->start(ui->spinTimer->value())) {
-        
+        qDebug() << 11;
       connect(_device, &svidev::SvIDevice::new_data, this, &MainWindow::new_data);
 //      connect(_device, SIGNAL(new_data(qreal)), this, SLOT(new_data(qreal)));
+      qDebug() << 11;
       emit newState(csWork);  
       
       return;
@@ -689,6 +694,17 @@ void MainWindow::on_bnAddNewDevice_clicked()
     case svidev::MAX35101EV:
       
       if(SvMAX35101EV::addNewDevice()) {
+        
+        svidev::fill_device_list(ui->cbDevices);
+        ui->cbDevices->setCurrentIndex(ui->cbDevices->count() - 1);
+        
+      }
+      
+      break;
+      
+    case svidev::TDC1000_TDC7200EVM:
+      
+      if(SvTDC1000_7200EVM::addNewDevice()) { 
         
         svidev::fill_device_list(ui->cbDevices);
         ui->cbDevices->setCurrentIndex(ui->cbDevices->count() - 1);

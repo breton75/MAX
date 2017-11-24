@@ -27,7 +27,7 @@ void SvVirtualDevice::close()
 bool SvVirtualDevice::start(quint32 msecs)
 {
   if(!isOpened()) {
-    setLastError(QString("%1: device is not opened").arg(deviceInfo().name));
+    setLastError(QString("%1: device is not opened").arg(deviceInfo(). deviceName));
     return false;
   }
 
@@ -44,7 +44,7 @@ bool SvVirtualDevice::start(quint32 msecs)
   return true;
 }
 
-bool SvVirtualDevice::stop()
+void SvVirtualDevice::stop()
 {
   if(_thr)
     delete _thr;

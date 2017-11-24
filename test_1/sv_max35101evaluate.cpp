@@ -57,7 +57,7 @@ void SvMAX35101EV::close()
 bool SvMAX35101EV::start(quint32 msecs)
 {
   if(!isOpened()) {
-    setLastError(QString("%1: device is not opened").arg(deviceInfo().name));
+    setLastError(QString("%1: device is not opened").arg(deviceInfo().deviceName));
     return false;
   }
   
@@ -111,7 +111,7 @@ bool SvMAX35101EV::addNewDevice()
 /** ---------  ------------ **/
 SvSelectMAX35101EVDevice::SvSelectMAX35101EVDevice(QWidget *parent) :
   QDialog(parent),
-  ui(new Ui::SvSelectMAX35101EVDeviceDialog)
+  ui(new Ui::SvSelectDeviceDialog)
 {
   
   ui->setupUi(this);

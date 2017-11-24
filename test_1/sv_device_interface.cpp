@@ -83,8 +83,8 @@ QSqlError svidev::fill_device_info(int dbid, svidev::DeviceInfo &dinfo)
     dinfo.idProduct = q->value("product_id").toUInt();
     dinfo.idVendor = q->value("vendor_id").toUInt();
     dinfo.iManufacturer = q->value("manufacturer_id").toUInt();
-    dinfo.name = q->value("device_name").toString();
-    dinfo.port = q->value("port_name").toUInt();
+    dinfo.deviceName = q->value("device_name").toString();
+    dinfo.portName = q->value("port_name").toString();
                        
   } 
   
