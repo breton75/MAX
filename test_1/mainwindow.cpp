@@ -263,12 +263,10 @@ void MainWindow::on_bnCycle_clicked()
         break;
     }    
     
-    qDebug() << 11;
     if(_device->open() && _device->start(ui->spinTimer->value())) {
-        qDebug() << 11;
       connect(_device, &svidev::SvIDevice::new_data, this, &MainWindow::new_data);
 //      connect(_device, SIGNAL(new_data(qreal)), this, SLOT(new_data(qreal)));
-      qDebug() << 11;
+      
       emit newState(csWork);  
       
       return;

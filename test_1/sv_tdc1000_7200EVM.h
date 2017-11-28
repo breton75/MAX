@@ -14,7 +14,8 @@ namespace Ui {
 class SvSelectDeviceDialog;
 }
 
-#define CALIBRATION2_PERIODS 10
+#define TDC_CALIBRATION2_PERIODS 10
+#define TDC_CLOCK 8000000
 
 #pragma pack(push, 1)
 struct TDC1000_ANSWER{
@@ -83,6 +84,48 @@ private:
   
   SvPullTDC1000_7200EVM* _pull_thr = nullptr;
   
+};
+
+class SvSerialTDC1000_7200EVM : public QObject
+{
+  Q_OBJECT
+  
+public:
+  explicit SvSerialTDC1000_7200EVM(const QSerialPortInfo &portInfo, QObject *parent = 0):
+    QObject(parent)
+  {
+    _port_info = portInfo;
+    port.setPort(_port_info);
+  }
+  
+  ~SvSerialTDC1000_7200EVM();
+  
+  bool open() {
+    if(!port.open(QIODevice::ReadWrite)) {
+      _last_error = QString("Ошибка при открытии порта %1.\n%2")
+                        .arg(_port_info.portName()).arg(_serial->errorString());
+      return false;
+    }
+    
+    _serial->moveToThread(this);
+    
+    return true;
+    }
+  }
+
+  void close();
+  
+  bool start(quint32 msecs);
+  void stop();
+  
+  QSerialPort port;
+   
+private:
+  QSerialPortInfo _port_info;
+  QString _last_error = "";
+  
+  signals:
+  error(const QString&);
 };
 
 

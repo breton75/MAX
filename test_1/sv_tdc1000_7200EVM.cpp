@@ -166,7 +166,7 @@ SvPullTDC1000_7200EVM::SvPullTDC1000_7200EVM(const QSerialPortInfo &portInfo, QM
 
 bool SvPullTDC1000_7200EVM::open()
 {
-  _serial = new QSerialPort(_port_info.portName());
+  _serial = new QSerialPort(_port_info.portName(), this);
   
   if (!_serial) {
     
@@ -190,6 +190,8 @@ bool SvPullTDC1000_7200EVM::open()
 
 SvPullTDC1000_7200EVM::~SvPullTDC1000_7200EVM() 
 { 
+  stop(); 
+  
   if(_serial) {
     
     if(_serial->isOpen()) {
@@ -199,7 +201,6 @@ SvPullTDC1000_7200EVM::~SvPullTDC1000_7200EVM()
     delete _serial;    
   }
   
-  stop(); 
   deleteLater(); 
 }
 
@@ -227,41 +228,47 @@ void SvPullTDC1000_7200EVM::run()
   
   while(_started) {
     
+    _mutex->lock();
+    
     /** ******** читаем канал 1 ********* **/
     /* устанавливаем первый канал TX1 */
     result = _writeRead(params1, 1);
-    qDebug() << 1 << result.msg;
+    
     if(result.result) {
     
       result = _writeRead(request1, 2);
-      qDebug() << 2 << result.result;
+      
       if(result.result) {
       
         /* фиксируем время t1 */
         memcpy(&tdc1000data, result.answer.data(), sizeof(TDC1000_ANSWER));
     
         /** ЗДЕСЬ ДОЛЖНА БЫТЬ ФОРМУЛА */
-        result.t1 = tdc1000data.time1; 
+        qreal calCount = qreal(tdc1000data.calibr2 - tdc1000data.calibr1) / qreal(TDC_CALIBRATION2_PERIODS - 1);
+        qreal normLSB = (1.0 / qreal(TDC_CLOCK)) / calCount;
+                   
+        measured_data.tof1 = normLSB * qreal(tdc1000data.time1 - tdc1000data.time2) + qreal(tdc1000data.clc1) * (1.0 / qreal(TDC_CLOCK)); 
         /** ****************** ********/
     
     
         /** ******** читаем канал 2 ********* **/
         /* устанавливаем второй канал TX2 */
         result = _writeRead(params2, 1);
-        qDebug() << 3 << result.result;
+        
         if(result.result) {
     
           result = _writeRead(request2, 2);
-          qDebug() << 4 << result.result;
+          
           if(result.result) {
       
             /* фиксируем время t2 */
             memcpy(&tdc1000data, result.answer.data(), sizeof(TDC1000_ANSWER));
             
             /** ЗДЕСЬ ДОЛЖНА БЫТЬ ФОРМУЛА */
-            qreal calCount = (tdc1000data.calibr2 - tdc1000data.calibr1) / (CALIBRATION2_PERIODS - 1);
-            
-            result.t2 = tdc1000data.time2; 
+            calCount = qreal(tdc1000data.calibr2 - tdc1000data.calibr1) / qreal(TDC_CALIBRATION2_PERIODS - 1);
+            normLSB = (1.0 / qreal(TDC_CLOCK)) / calCount;
+                       
+            measured_data.tof2 = normLSB * qreal(tdc1000data.time1 - tdc1000data.time2) + qreal(tdc1000data.clc1) * (1.0 / qreal(TDC_CLOCK)); 
             /** ****************** ********/
             
           }
@@ -269,11 +276,12 @@ void SvPullTDC1000_7200EVM::run()
       }
     }
     
-    qDebug() << tdc1000data.time1;
-    qDebug() << tdc1000data.time2;
+    _mutex->unlock();
+//    qDebug() << tdc1000data.time1;
+//    qDebug() << tdc1000data.time2;
     
-//    if(result.result)
-//      emit new_data(measured_data); 
+    if(result.result) 
+      emit new_data(measured_data); 
     
     msleep(_timeout);
     
@@ -286,8 +294,9 @@ void SvPullTDC1000_7200EVM::run()
 qres SvPullTDC1000_7200EVM::_writeRead(const QByteArray& request, int answer_count)
 {
   qres res;
+  res.result = true;
   
-  qDebug() << 1;
+//  qDebug() << 1;
   _serial->write(request);
   
   if(!_serial->waitForBytesWritten(1000)) {
@@ -310,13 +319,13 @@ qres SvPullTDC1000_7200EVM::_writeRead(const QByteArray& request, int answer_cou
     res.answer.clear();
     res.answer = _serial->readAll();
     
-    if(res.answer.size() != sizeof(TDC1000_ANSWER)) {
+//    if(res.answer.size() != sizeof(TDC1000_ANSWER)) {
       
-      res.result = false;
-      res.msg = QString("Неверный ответ. Получено %1 байт. Ожидалось %2.")
-                   .arg(res.answer.size())
-                   .arg(sizeof(TDC1000_ANSWER));
-    }
+//      res.result = false;
+//      res.msg = QString("Неверный ответ. Получено %1 байт. Ожидалось %2.")
+//                   .arg(res.answer.size())
+//                   .arg(sizeof(TDC1000_ANSWER));
+//    }
   }
   
   return res;
