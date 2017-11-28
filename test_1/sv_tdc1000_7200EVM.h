@@ -6,6 +6,7 @@
 #include <QSerialPortInfo>
 #include <QThread>
 #include <QtEndian>
+#include <QTimer>
 
 #include "sv_device_interface.h"
 #include "ui_sv_select_device_dialog.h"
@@ -61,6 +62,7 @@ struct qres {
 //qres writeReadTDC1000(QSerialPort *serial, QByteArray data, int answer_count);
 
 class SvPullTDC1000_7200EVM;
+class SvSerialTDC1000_7200EVM;
 
 class SvTDC1000_7200EVM : public svidev::SvIDevice
 {
@@ -82,7 +84,12 @@ public:
 private:
   QSerialPortInfo _port_info;
   
-  SvPullTDC1000_7200EVM* _pull_thr = nullptr;
+  SvSerialTDC1000_7200EVM *_serial_port = nullptr;
+//  SvPullTDC1000_7200EVM* _pull_thr = nullptr;
+  
+  QThread *_serial_thread = nullptr;
+  
+  void err() { qDebug() << "thread finished"; }
   
 };
 
@@ -98,25 +105,15 @@ public:
     port.setPort(_port_info);
   }
   
-  ~SvSerialTDC1000_7200EVM();
+  ~SvSerialTDC1000_7200EVM() { qDebug() << "destroyed"; deleteLater(); }
   
-  bool open() {
-    if(!port.open(QIODevice::ReadWrite)) {
-      _last_error = QString("Ошибка при открытии порта %1.\n%2")
-                        .arg(_port_info.portName()).arg(_serial->errorString());
-      return false;
-    }
-    
-    _serial->moveToThread(this);
-    
-    return true;
-    }
-  }
-
+  bool open();
   void close();
   
   bool start(quint32 msecs);
   void stop();
+  
+  QString lastError() { return _last_error; }
   
   QSerialPort port;
    
@@ -124,8 +121,18 @@ private:
   QSerialPortInfo _port_info;
   QString _last_error = "";
   
-  signals:
-  error(const QString&);
+  QTimer _timer;
+  
+private slots:
+//  void read_data();
+  void write_data();
+//  void onSerialPortError();
+  
+  
+signals:
+  void error(const QString&);
+  void new_data(const svidev::mdata_t& data);
+  
 };
 
 

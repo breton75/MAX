@@ -19,7 +19,8 @@ SvTDC1000_7200EVM::~SvTDC1000_7200EVM()
 
 bool SvTDC1000_7200EVM::open()
 {
-  
+
+/*  
   if(_pull_thr)
     delete _pull_thr;
 
@@ -35,11 +36,69 @@ bool SvTDC1000_7200EVM::open()
   }
   
 //  _pull_thr->_serial->moveToThread(_pull_thr);
+  */
+  
+  _serial_port = new SvSerialTDC1000_7200EVM(_port_info);
+  
+  if(!_serial_port->open()) {
+    setLastError(_serial_port->lastError());
+    return false;
+  }
+  
+  _serial_thread = new QThread();
+  _serial_port->moveToThread(_serial_thread);
+  _serial_port->port.moveToThread(_serial_thread);
+  connect(_serial_thread, &QThread::finished, this, &SvTDC1000_7200EVM::err);
+  connect(_serial_thread, &QThread::finished, _serial_thread, &QThread::deleteLater);
+  _serial_thread->start();
   
   qDebug() << 77;
   setOpened(true);
   qDebug() << 88;
   return true;
+}
+
+bool SvTDC1000_7200EVM::start(quint32 msecs)
+{
+  if(!_serial_port->start(msecs)) {
+    setLastError(_serial_port->lastError()); 
+    qDebug() << _serial_port->lastError();
+    return false;
+  }
+  
+  connect(_serial_port, &SvSerialTDC1000_7200EVM::new_data, this, &svidev::SvIDevice::new_data, Qt::QueuedConnection);
+  
+  return true;
+  
+  //  if(!_serial && !isOpened()) {
+      
+//  if(!_pull_thr) {
+//      setLastError(QString("%1: device is not opened").arg(deviceInfo().deviceName));
+//      return false;
+//    }
+  
+//  _pull_thr->setTimeout(msecs);
+  
+//  _pull_thr->start();
+  
+  
+}
+
+void SvTDC1000_7200EVM::stop()
+{
+  
+  _serial_port->stop();
+//  _serial_thread->quit();
+  
+  delete _serial_port;
+  delete _serial_thread;
+  
+/*
+  if(_pull_thr)
+    delete _pull_thr;
+  
+  _pull_thr = nullptr;
+  */
 }
 
 void SvTDC1000_7200EVM::close()
@@ -55,30 +114,6 @@ void SvTDC1000_7200EVM::close()
   setOpened(false);
 }
 
-bool SvTDC1000_7200EVM::start(quint32 msecs)
-{
-  //  if(!_serial && !isOpened()) {
-      
-  if(!_pull_thr) {
-      setLastError(QString("%1: device is not opened").arg(deviceInfo().deviceName));
-      return false;
-    }
-  
-  _pull_thr->setTimeout(msecs);
-  
-  connect(_pull_thr, &SvPullTDC1000_7200EVM::new_data, this, &svidev::SvIDevice::new_data, Qt::QueuedConnection);
-  _pull_thr->start();
-  
-  
-}
-
-void SvTDC1000_7200EVM::stop()
-{
-  if(_pull_thr)
-    delete _pull_thr;
-  
-  _pull_thr = nullptr;
-}
 
 bool SvTDC1000_7200EVM::addNewDevice()
 {
@@ -330,5 +365,135 @@ qres SvPullTDC1000_7200EVM::_writeRead(const QByteArray& request, int answer_cou
   
   return res;
   
+}
+
+
+/** **************************************** **/
+
+
+bool SvSerialTDC1000_7200EVM::open()
+{
+  
+  if(!port.open(QIODevice::ReadWrite)) {
+    
+    _last_error = QString("Ошибка при открытии порта %1.\n%2")
+                      .arg(_port_info.portName()).arg(port.errorString());
+    
+    emit error(_last_error);
+    
+    return false;
+  }
+  
+  
+  return true;
+  
+}
+
+void SvSerialTDC1000_7200EVM::close()
+{
+  stop();
+}
+
+bool SvSerialTDC1000_7200EVM::start(quint32 msecs)
+{
+  _timer.setInterval(msecs);
+  connect(&_timer, &QTimer::timeout, this, &SvSerialTDC1000_7200EVM::write_data);
+//  connect(port, &QSerialPort::error(QSerialPort::SerialPortError), this, &SvSerialTDC1000_7200EVM::error(QSerialPort::SerialPortError));
+  _timer.start();
+  return true;
+}
+
+void SvSerialTDC1000_7200EVM::stop()
+{
+  if(port.isOpen())
+    port.close();
+  
+  _timer.stop();
+}
+
+void SvSerialTDC1000_7200EVM::write_data()
+{
+  svidev::mdata_t measured_data;
+  TDC1000_ANSWER tdc1000data1, tdc1000data2;
+  
+  qreal calCount = 0;
+  qreal normLSB = 0;
+  
+  quint16 calibr2;
+  quint16 calibr1;
+  quint16 time1;
+  quint16 time2;
+  quint16 clc1;
+  
+  QByteArray params1 = QByteArray::fromHex("3032303230303030303030303030303030303030303030303030303030303030");
+  QByteArray request1 = QByteArray::fromHex("3035303030303030303030303030303030303030303030303030303030303030");
+  QByteArray params2 = QByteArray::fromHex("3032303230343030303030303030303030303030303030303030303030303030");
+  QByteArray request2 = QByteArray::fromHex("3035303030303030303030303030303030303030303030303030303030303030");
+  QByteArray b;
+  
+  /// первый канал
+  port.write(params1);
+  if(port.waitForReadyRead(200)) {
+    
+    b = port.readAll();
+    
+    port.write(request1);
+    if(port.waitForReadyRead(200)) {
+      
+      b = port.readAll();
+      
+      if(port.waitForReadyRead(200)) {
+        
+        b = port.readAll(); 
+        memcpy(&tdc1000data1, b.data(), sizeof(TDC1000_ANSWER));
+        
+        calibr2 = qFromBigEndian<quint16>(tdc1000data1.calibr2);
+        calibr1 = qFromBigEndian<quint16>(tdc1000data1.calibr1);
+        time1 = qFromBigEndian<quint16>(tdc1000data1.time1);
+        time2 = qFromBigEndian<quint16>(tdc1000data1.time2);
+        clc1 = qFromBigEndian<quint16>(tdc1000data1.clc1);
+        
+        calCount = (calibr2 - calibr1) / qreal(TDC_CALIBRATION2_PERIODS - 1);
+        normLSB = (1.0 / qreal(TDC_CLOCK)) / calCount;
+        
+//        qDebug() << b.toHex();           
+        measured_data.tof1 = 1000000000 * (normLSB * (time1 - time2) + clc1 * (1.0 / qreal(TDC_CLOCK))); 
+//        qDebug() << calibr2 << calibr1 << calCount << normLSB << clc1 << measured_data.tof1;
+    
+        
+        /// второй канал
+        port.write(params2);
+        if(port.waitForReadyRead(200)) {
+          
+          b = port.readAll();
+          
+          port.write(request2);
+          if(port.waitForReadyRead(200)) {
+            
+            b = port.readAll();
+            if(port.waitForReadyRead(200)) {
+
+              b = port.readAll();
+              memcpy(&tdc1000data2, b.data(), sizeof(TDC1000_ANSWER));
+              
+              calibr2 = qFromBigEndian<quint16>(tdc1000data2.calibr2);
+              calibr1 = qFromBigEndian<quint16>(tdc1000data2.calibr1);
+              time1 = qFromBigEndian<quint16>(tdc1000data2.time1);
+              time2 = qFromBigEndian<quint16>(tdc1000data2.time2);
+              clc1 = qFromBigEndian<quint16>(tdc1000data2.clc1);
+              
+              calCount = (calibr2 - calibr1) / qreal(TDC_CALIBRATION2_PERIODS - 1);
+              normLSB = (1.0 / qreal(TDC_CLOCK)) / calCount;
+              
+              measured_data.tof2 = 1000000000 *(normLSB * (time1 - time2) + clc1 * (1.0 / qreal(TDC_CLOCK)));
+//              qDebug() << measured_data.tof1 << measured_data.tof2;
+              emit new_data(measured_data);
+              
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
