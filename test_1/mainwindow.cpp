@@ -288,6 +288,8 @@ void MainWindow::on_bnCycle_clicked()
   on_bnSaveToFile_clicked(false);
   
   /** ВНИМАНИЕ здесь вызывается деструктор устройства **/  
+  _device->stop();
+  _device->close();
   delete _device; 
   _device = nullptr;
 

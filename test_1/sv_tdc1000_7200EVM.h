@@ -18,6 +18,8 @@ class SvSelectDeviceDialog;
 #define TDC_CALIBRATION2_PERIODS 10
 #define TDC_CLOCK 8000000
 
+#define TDC_PARAMS_ANSWER_SIZE 32
+
 #pragma pack(push, 1)
 struct TDC1000_ANSWER{
   qint8  z0;
@@ -80,60 +82,77 @@ public:
   void stop();
   
   static bool addNewDevice();
-   
+  
+  QSerialPort port;
+  
+  svidev::mdata_t last_data;
+  
 private:
   QSerialPortInfo _port_info;
   
-  SvSerialTDC1000_7200EVM *_serial_port = nullptr;
+//  SvSerialTDC1000_7200EVM *_serial_port = nullptr;
 //  SvPullTDC1000_7200EVM* _pull_thr = nullptr;
   
-  QThread *_serial_thread = nullptr;
+//  QThread *_serial_thread = nullptr;
   
   void err() { qDebug() << "thread finished"; }
+
+  void write_params(const QByteArray &params);
+  bool ParamsWritten = true;
+  
+  quint8 _ch_num = 1;
+  
+private slots:
+  void read_data();
+  void write_data();
   
 };
 
-class SvSerialTDC1000_7200EVM : public QObject
-{
-  Q_OBJECT
+//class SvSerialTDC1000_7200EVM : public QObject
+//{
+//  Q_OBJECT
   
-public:
-  explicit SvSerialTDC1000_7200EVM(const QSerialPortInfo &portInfo, QObject *parent = 0):
-    QObject(parent)
-  {
-    _port_info = portInfo;
-    port.setPort(_port_info);
-  }
+//public:
+//  explicit SvSerialTDC1000_7200EVM(const QSerialPortInfo &portInfo, QObject *parent = 0):
+//    QObject(parent)
+//  {
+//    _port_info = portInfo;
+//    port.setPort(_port_info);
+//  }
   
-  ~SvSerialTDC1000_7200EVM() { qDebug() << "destroyed"; deleteLater(); }
+//  ~SvSerialTDC1000_7200EVM() { qDebug() << "destroyed"; deleteLater(); }
   
-  bool open();
-  void close();
+//  bool open();
+//  void close();
   
-  bool start(quint32 msecs);
-  void stop();
+//  bool start(quint32 msecs);
+//  void stop();
   
-  QString lastError() { return _last_error; }
+//  QString lastError() { return _last_error; }
   
-  QSerialPort port;
+//  QSerialPort port;
+  
+//  svidev::mdata_t last_data;
    
-private:
-  QSerialPortInfo _port_info;
-  QString _last_error = "";
+//private:
+//  QSerialPortInfo _port_info;
+//  QString _last_error = "";
   
-  QTimer _timer;
+//  QTimer _timer;
   
-private slots:
+//  quint8 ch_num = 1;
+  
+//private slots:
 //  void read_data();
-  void write_data();
-//  void onSerialPortError();
+//  void write_data();
+////  void onSerialPortError();
   
   
-signals:
-  void error(const QString&);
-  void new_data(const svidev::mdata_t& data);
+//signals:
+//  void error(const QString&);
+//  void new_data(const svidev::mdata_t& data);
   
-};
+//};
 
 
 /** ------------------------------------------- **/
