@@ -70,6 +70,14 @@ class SvTDC1000_7200EVM : public svidev::SvIDevice
 {
   Q_OBJECT
   
+  const QByteArray TDC_PARAMS_SETUP = QByteArray::fromHex("3138303030303030303030303030303030303030303030303030303030303030");
+  const QByteArray TDC_PARAMS_TDC1000 = QByteArray::fromHex("3032303231323030303030303030303030303030303030303030303030303030");
+  const QByteArray TDC_PARAMS_TDC7200 = QByteArray::fromHex("3132303038323030303030303030303030303030303030303030303030303030");
+  const QByteArray TDC_PARAMS_CONT_TRIGG = QByteArray::fromHex("3034303030303030303030303030303030303030303030303030303030303030");
+
+  const QByteArray TDC_CMD_START = QByteArray::fromHex("3036303030303030303030303030303030303030303030303030303030303030");
+  const QByteArray TDC_CMD_STOP = QByteArray::fromHex("3037303030303030303030303030303030303030303030303030303030303030");
+  
 public:
   explicit SvTDC1000_7200EVM(svidev::DeviceInfo deviceInfo, QObject *parent = 0);
   
@@ -83,115 +91,20 @@ public:
   
   static bool addNewDevice();
   
-  QSerialPort port;
-  
   svidev::mdata_t last_data;
   
 private:
+  QSerialPort _port;
   QSerialPortInfo _port_info;
-  
-//  SvSerialTDC1000_7200EVM *_serial_port = nullptr;
-//  SvPullTDC1000_7200EVM* _pull_thr = nullptr;
-  
-//  QThread *_serial_thread = nullptr;
-  
-  void err() { qDebug() << "thread finished"; }
-
-  void write_params(const QByteArray &params);
-  bool ParamsWritten = true;
   
   quint8 _ch_num = 1;
   
+  bool ParamsWritten = true;
+  
+  void write_params(const QByteArray &params);
+  
 private slots:
   void read_data();
-  void write_data();
-  
-};
-
-//class SvSerialTDC1000_7200EVM : public QObject
-//{
-//  Q_OBJECT
-  
-//public:
-//  explicit SvSerialTDC1000_7200EVM(const QSerialPortInfo &portInfo, QObject *parent = 0):
-//    QObject(parent)
-//  {
-//    _port_info = portInfo;
-//    port.setPort(_port_info);
-//  }
-  
-//  ~SvSerialTDC1000_7200EVM() { qDebug() << "destroyed"; deleteLater(); }
-  
-//  bool open();
-//  void close();
-  
-//  bool start(quint32 msecs);
-//  void stop();
-  
-//  QString lastError() { return _last_error; }
-  
-//  QSerialPort port;
-  
-//  svidev::mdata_t last_data;
-   
-//private:
-//  QSerialPortInfo _port_info;
-//  QString _last_error = "";
-  
-//  QTimer _timer;
-  
-//  quint8 ch_num = 1;
-  
-//private slots:
-//  void read_data();
-//  void write_data();
-////  void onSerialPortError();
-  
-  
-//signals:
-//  void error(const QString&);
-//  void new_data(const svidev::mdata_t& data);
-  
-//};
-
-
-/** ------------------------------------------- **/
-
-class SvPullTDC1000_7200EVM: public QThread
-{
-    Q_OBJECT
-  
-public:
-  explicit SvPullTDC1000_7200EVM(const QSerialPortInfo &portInfo, QMutex *mutex);  
-  ~SvPullTDC1000_7200EVM();
-  
-  bool open();
-  void stop();
-  
-  QString lastError() { return _last_error; }
-  
-  void setTimeout(quint32 msecs) { _timeout = msecs; }
-  
-  QSerialPort *_serial = nullptr;
-  
-private:
-  void run() Q_DECL_OVERRIDE;
-  
-  bool _started = false;
-  bool _finished = true;
-  
-  quint32 _timeout;
-  
-  QSerialPortInfo _port_info;
-  
-  QMutex* _mutex;
-  
-  QString _last_error = "";
-  
-  qres _writeRead(const QByteArray &request, int answer_count);
-  
-signals:
-  void new_data(const svidev::mdata_t& data);
   
 };
 
