@@ -265,7 +265,6 @@ void MainWindow::on_bnCycle_clicked()
 
     if(_device->open() && _device->start(ui->spinTimer->value())) {
       connect(_device, &svidev::SvIDevice::new_data, this, &MainWindow::new_data);
-//      connect(_device, SIGNAL(new_data(qreal)), this, SLOT(new_data(qreal)));
       
       emit newState(csWork);  
       

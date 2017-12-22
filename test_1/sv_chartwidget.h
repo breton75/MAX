@@ -41,11 +41,33 @@
 #include <QSpinBox>
 #include <QtCore/QTime>
 #include <QtCore/QDebug>
+#include <QPrintDialog>
+#include <QMenu>
 
 #include "qcustomplot.h"
 
 #include "sv_graph.h"
 
+/** структуры заголовков для записи в файл **/
+#pragma pack(1)
+struct FileHeader {
+  char signature[15] = {'F','L','O','W',' ','R','A','T','E',' ','S','T','A','N','D'};
+  int graph_count;
+  quint32 start_x;
+};
+#pragma pack(pop)
+
+#pragma pack(1)
+struct GraphHeader {
+//  int legend_length;
+//  uchar legend[256];
+//  QByteArray legend;
+  int graph_id;
+  int line_width;
+  quint32 line_color;
+  int line_style;
+};
+#pragma pack(pop)
 
 namespace svchart {
 
@@ -214,6 +236,10 @@ private slots:
     void on_bnYAutoscale_clicked(bool checked);
     void on_cbXAutoScroll_currentIndexChanged(int index);
 //    void on_cbXMeasureUnit_currentIndexChanged(int index);
+    void contextMenuRequest(QPoint pos);
+    
+    void saveBmp();
+//    void saveFrs(bool wholePlot = true);
     
 //    void setXRange(double lower, double upper);
 signals:

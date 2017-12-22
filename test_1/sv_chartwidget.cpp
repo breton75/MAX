@@ -45,7 +45,9 @@ svchart::SvChartWidget::SvChartWidget(ChartParams &params, QWidget *parent)
   bnYAutoscale->setChecked(_params.y_autoscale);  
   cbXAutoScroll->setCurrentIndex(cbXAutoScroll->findData(QVariant(_params.x_autoscroll_type)));
   cbXMeasureUnit->setCurrentIndex(cbXMeasureUnit->findData(QVariant(_params.x_measure_unit))); 
-    
+  
+//  _customplot->setContextMenuPolicy(Qt::CustomContextMenu);
+//  connect(_customplot, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequest(QPoint)));  
   
 }
 
@@ -574,3 +576,105 @@ void svchart::SvChartWidget::rangeChanged(QCPRange range)
                                .arg(ChartXMeasureUnits.value(_params.x_measure_unit))
                                .arg(_customplot->xAxis->range().size()));
 }
+
+void svchart::SvChartWidget::contextMenuRequest(QPoint pos)
+{
+  QMenu *menu = new QMenu(this); 
+  menu->setAttribute(Qt::WA_DeleteOnClose);
+  
+//  menu->addAction("Сохранить все", this, SLOT(saveFrs(bool)));
+//  menu->addAction("Сохранить диапазон", this, SLOT(saveFrs(bool)));
+  menu->addAction("Сохранить изображение", this, SLOT(saveBmp()));
+
+  menu->popup(_customplot->mapToGlobal(pos));
+}
+
+void svchart::SvChartWidget::saveBmp()
+{
+  QFileInfo fi(QFileDialog::getSaveFileName(this, "Укажите путь", "", "Файлы bmp (*.bmp);;Все файлы (*.*)"));
+
+  if(fi.fileName().isEmpty()) {
+    return;
+  }
+  
+  if(_customplot->saveBmp(fi.absoluteFilePath())) {
+    
+  }
+  else {
+    QMessageBox::critical(this, "Ошибка", QString("Не удалось сохранить файл %1.").arg(fi.fileName()), QMessageBox::Ok);
+  }
+}
+
+//void svchart::SvChartWidget::saveFrs(bool wholePlot)
+//{
+//  /* проверяем, что количество графиков не равно 0 */
+//  if(_graphs.count() == 0) {
+//    QMessageBox::critical(this, "Ошибка", "Нет данных для сохранения.", QMessageBox::Ok);
+//    return;
+//  }
+  
+//  /* имя файла */
+//  QFileInfo fi(QFileDialog::getSaveFileName(this, "Укажите путь", "", "Файлы графиков (*.frs);;Все файлы (*.*)"));
+
+//  if(fi.fileName().isEmpty()) {
+//    return;
+//  }
+  
+//  QFile *file = new QFile(fi.absoluteFilePath());
+//  bool b = file->open(QIODevice::WriteOnly);
+  
+//  /* если не удалось создать файл, то выводим сообщение об ошибке, удаляем указатель и выходим */
+//  if(!b) {
+//      QString msg = file->errorString();
+//      delete file;
+//      QMessageBox::critical(this, "Ошибка", QString("Нет удалось создать файл.\n%1").arg(msg), QMessageBox::Ok);
+//      return;
+//  }
+
+//  /** ********** пишем файл *********** **/
+  
+//  /* определяем границы графика для сохранения */  
+//  double firstX = wholePlot ? 0 : _customplot->xAxis->range().lower;
+//  double lastX = wholePlot ? _graphs.first()->graph->data()->last().key : _customplot->xAxis->range().upper;
+  
+//  /* заголовок файла - сигнатура и кол-во графиков */
+//  FileHeader file_head;
+  
+//  file_head.graph_count = _customplot->graphCount();
+//  file_head.start_x = quint32(firstX);
+//  file->write((const char*)&file_head, sizeof(FileHeader));
+
+//  /* параметры графиков */
+//  for(int i = 0; i < graphList().count(); i++) {
+    
+//    svgraph::GraphIDs graph_id = graphList()[i];
+    
+//    GraphHeader graph_head;
+//    graph_head.graph_id = graph_id;
+   
+//    graph_head.line_color = static_cast<quint32>(graphParams(graph_id).line_color.rgb());
+//    graph_head.line_style = graphParams(graph_id).line_style;
+//    graph_head.line_width = graphParams(graph_id).line_width;
+    
+//    file->write((const char*)&graph_head, sizeof(GraphHeader));
+    
+//  }
+ 
+  
+//  /* сохраняем данные графиков */
+//  for(double x = firstX; x <= lastX; x += 1) {
+    
+//    for(svchart::GRAPH* g: _graphs.values()) {
+      
+//      double y = g->graph->data()->value(x).value;
+//      file->write((const char*)&y, sizeof(double));
+      
+//    }
+//  }
+   
+////  QMessageBox::critical(this, "Ошибка", QString("Не удалось сохранить файл %1.").arg(fi.fileName()), QMessageBox::Ok);
+  
+//  file->close();
+//  delete file;
+  
+//}

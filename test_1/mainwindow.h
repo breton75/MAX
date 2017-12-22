@@ -50,27 +50,6 @@ struct GraphInfo {
   QCPGraph *graph;
 };
 
-/** структуры заголовков для записи в файл **/
-
-#pragma pack(1)
-struct FileHeader {
-  char signature[15] = {'F','L','O','W',' ','R','A','T','E',' ','S','T','A','N','D'};
-  int graph_count;
-  quint32 start_x;
-};
-#pragma pack(pop)
-
-#pragma pack(1)
-struct GraphHeader {
-//  int legend_length;
-//  uchar legend[256];
-//  QByteArray legend;
-  int graph_id;
-  int line_width;
-  quint32 line_color;
-  int line_style;
-};
-#pragma pack(pop)
 
 #define L 0.0895 // расстояние между излучателями в метрах
 
